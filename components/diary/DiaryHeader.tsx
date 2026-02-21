@@ -5,14 +5,12 @@ import type { ReactNode } from 'react';
 interface DiaryHeaderProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
-  dayTotalCalories?: number;
   voiceAddButton?: ReactNode;
 }
 
 export default function DiaryHeader({
   selectedDate,
   onDateChange,
-  dayTotalCalories,
   voiceAddButton,
 }: DiaryHeaderProps) {
   const formatDate = (date: Date) => {
@@ -42,14 +40,6 @@ export default function DiaryHeader({
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {voiceAddButton != null ? <div className="flex items-center gap-2">{voiceAddButton}</div> : null}
-        {dayTotalCalories != null && (
-          <div className="flex items-center justify-center md:justify-start">
-            <div className="px-4 py-2 rounded-lg font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-              За день: {Math.round(dayTotalCalories)} ккал
-            </div>
-          </div>
-        )}
-
         <div className="flex flex-1 items-center justify-center gap-2 sm:gap-4 min-w-0">
           <button
             type="button"

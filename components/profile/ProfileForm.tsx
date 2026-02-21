@@ -1,7 +1,12 @@
 'use client';
 
+import {
+  getDailyCaloriesNeeded,
+  getOptimalWeight,
+  SUGGESTED_CALORIE_DEFICIT,
+} from '@/lib/calories';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface ProfileFormProps {
   initialData: {
@@ -9,6 +14,7 @@ interface ProfileFormProps {
     height: number | null;
     weight: number | null;
     birthDate: string | null;
+    calorieDeficit: number | null;
   };
 }
 
@@ -23,7 +29,23 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     height: initialData.height?.toString() || '',
     weight: initialData.weight?.toString() || '',
     birthDate: initialData.birthDate || '',
+    calorieDeficit:
+      initialData.calorieDeficit != null
+        ? String(initialData.calorieDeficit)
+        : String(SUGGESTED_CALORIE_DEFICIT),
   });
+
+  const calculations = useMemo(() => {
+    const height = formData.height ? parseInt(formData.height, 10) : 0;
+    const weight = formData.weight ? parseFloat(formData.weight) : 0;
+    const birthDate = formData.birthDate ? new Date(formData.birthDate) : null;
+    if (height <= 0 || weight <= 0) return null;
+    const optimal = getOptimalWeight(height);
+    const daily = birthDate
+      ? getDailyCaloriesNeeded(height, weight, birthDate)
+      : null;
+    return { optimalWeight: optimal, dailyCaloriesNeeded: daily };
+  }, [formData.height, formData.weight, formData.birthDate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -46,6 +68,9 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           height: formData.height ? parseInt(formData.height, 10) : null,
           weight: formData.weight ? parseFloat(formData.weight) : null,
           birthDate: formData.birthDate || null,
+          calorieDeficit: formData.calorieDeficit
+            ? parseInt(formData.calorieDeficit, 10)
+            : null,
         }),
       });
 
@@ -152,7 +177,51 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               className={`${inputClass} [&::-webkit-calendar-picker-indicator]:cursor-pointer`}
             />
           </div>
+
+          <div>
+            <label htmlFor="calorieDeficit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Дефицит калорий (ккал/день)
+            </label>
+            <input
+              id="calorieDeficit"
+              name="calorieDeficit"
+              type="number"
+              min={0}
+              max={2000}
+              value={formData.calorieDeficit}
+              onChange={handleChange}
+              className={inputClass}
+              placeholder={String(SUGGESTED_CALORIE_DEFICIT)}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Для похудения ~0,5 кг/нед обычно 400–500 ккал
+            </p>
+          </div>
         </div>
+
+        {calculations && (
+          <div className="mt-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Расчёт при сохранении
+            </h3>
+            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <li>Оптимальный вес (ИМТ 21,5): {calculations.optimalWeight} кг</li>
+              {calculations.dailyCaloriesNeeded != null && (
+                <li>Норма ккал/день: {calculations.dailyCaloriesNeeded} ккал</li>
+              )}
+              {calculations.dailyCaloriesNeeded != null && formData.calorieDeficit && (
+                <li>
+                  Цель в день:{' '}
+                  {Math.max(
+                    0,
+                    calculations.dailyCaloriesNeeded - parseInt(formData.calorieDeficit, 10) || 0
+                  )}{' '}
+                  ккал
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end">

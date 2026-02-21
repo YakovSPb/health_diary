@@ -1,4 +1,5 @@
 import ProfileForm from '@/components/profile/ProfileForm';
+import WearableTokens from '@/components/profile/WearableTokens';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
@@ -23,6 +24,7 @@ export default async function ProfilePage() {
       height: true,
       weight: true,
       birthDate: true,
+      calorieDeficit: true,
     },
   });
 
@@ -48,8 +50,13 @@ export default async function ProfilePage() {
             height: user.height,
             weight: user.weight,
             birthDate: user.birthDate ? user.birthDate.toISOString().split('T')[0] : null,
+            calorieDeficit: user.calorieDeficit,
           }}
         />
+
+        <div className="mt-8">
+          <WearableTokens />
+        </div>
       </div>
     </div>
   );

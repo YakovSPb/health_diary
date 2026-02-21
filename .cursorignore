@@ -1,0 +1,19 @@
+# Сборка и зависимости
+.next/
+node_modules/
+
+# Переменные окружения (секреты)
+.env
+.env.local
+.env.*.local
+
+# Базы данных (бинарные/локальные)
+prisma/*.db
+prisma/*.db-journal
+
+# IDE
+.idea/
+
+# Логи и кэш
+*.log
+.turbo

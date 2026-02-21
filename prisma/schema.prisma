@@ -17,17 +17,20 @@ model User {
   image         String?
   password      String?
 
-  height   Int?     // Рост в см
-  weight   Float?   // Вес в кг
-  birthDate DateTime? // Дата рождения (для расчёта возраста)
+  height         Int?     // Рост в см
+  weight         Float?   // Вес в кг
+  birthDate      DateTime? // Дата рождения (для расчёта возраста)
+  calorieDeficit Int?     // Целевой дефицит ккал/день (для похудения)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts  Account[]
-  sessions  Session[]
-  meals     Meal[]
-  menuItems MenuItem[]
+  accounts         Account[]
+  sessions         Session[]
+  meals            Meal[]
+  menuItems        MenuItem[]
+  wearableData     WearableData[]
+  wearableSyncTokens WearableSyncToken[]
 }
 
 model Account {
@@ -119,4 +122,36 @@ model MenuItem {
 
   @@index([userId])
   @@index([userId, name])
+}
+
+// Данные с носимых устройств (Samsung Watch, Samsung Health и т.д.)
+model WearableData {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // steps, sleep_minutes, heart_rate, weight, blood_oxygen, active_calories, ...
+  value     Float
+  unit      String?  // count, min, bpm, kg, percent, kcal, ...
+  date      DateTime // дата/время измерения (начало дня для шагов, момент для пульса и т.д.)
+  source    String   @default("samsung_health")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, type, date])
+}
+
+// Токен для авторизации мобильного приложения при отправке данных с часов
+model WearableSyncToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   // bcrypt hash токена
+  tokenPrefix String  // первые символы токена для быстрого поиска (уникальный)
+  label      String?  // например "Samsung Watch"
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenPrefix])
+  @@index([userId])
 }

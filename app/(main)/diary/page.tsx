@@ -1,7 +1,9 @@
 'use client';
 
+import DiaryDayCalories from '@/components/diary/DiaryDayCalories';
 import DiaryHeader from '@/components/diary/DiaryHeader';
 import MealBlock from '@/components/diary/MealBlock';
+import { getTargetCaloriesPerDay } from '@/lib/calories';
 import { formatDateForApi, getCurrentTime, getMealNameWithOrder } from '@/lib/date-utils';
 import { useSession } from 'next-auth/react';
 import { useCallback, useEffect, useState } from 'react';
@@ -47,12 +49,48 @@ function extractProductName(text: string): string {
   return cleaned || text;
 }
 
+interface ProfileCalories {
+  dailyCaloriesNeeded: number | null;
+  calorieDeficit: number | null;
+}
+
 export default function DiaryPage() {
   const { data: session } = useSession();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savedToMenuFoodIds, setSavedToMenuFoodIds] = useState<Set<string>>(new Set());
+  const [profileCalories, setProfileCalories] = useState<ProfileCalories | null>(null);
+
+  const fetchProfile = useCallback(async () => {
+    if (!session) return;
+    try {
+      const res = await fetch('/api/profile');
+      if (res.ok) {
+        const data = await res.json();
+        setProfileCalories({
+          dailyCaloriesNeeded: data.dailyCaloriesNeeded ?? null,
+          calorieDeficit: data.calorieDeficit ?? null,
+        });
+      }
+    } catch {
+      setProfileCalories(null);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchProfile();
+  }, [session, fetchProfile]);
+
+  const targetCaloriesPerDay =
+    profileCalories?.dailyCaloriesNeeded != null &&
+    profileCalories?.calorieDeficit != null
+      ? getTargetCaloriesPerDay(
+          profileCalories.dailyCaloriesNeeded,
+          profileCalories.calorieDeficit
+        )
+      : null;
 
   const fetchMeals = useCallback(async () => {
     if (!session) return;
@@ -353,7 +391,6 @@ export default function DiaryPage() {
         <DiaryHeader
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
-          dayTotalCalories={meals.length > 0 ? dayTotalCalories : undefined}
         />
 
         {isLoading ? (
@@ -363,18 +400,24 @@ export default function DiaryPage() {
         ) : (
           <>
             {meals.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Нет приёмов пищи за этот день
-                </p>
-                <button
-                  type="button"
-                  onClick={handleAddMeal}
-                  className="min-h-[48px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation"
-                >
-                  Добавить первый приём пищи
-                </button>
-              </div>
+              <>
+                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-12 text-center">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Нет приёмов пищи за этот день
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAddMeal}
+                    className="min-h-[48px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation"
+                  >
+                    Добавить первый приём пищи
+                  </button>
+                </div>
+                <DiaryDayCalories
+                  dayTotalCalories={0}
+                  targetCaloriesPerDay={targetCaloriesPerDay}
+                />
+              </>
             ) : (
               <>
                 {meals.map((meal) => (
@@ -406,6 +449,11 @@ export default function DiaryPage() {
                 >
                   + Добавить приём пищи
                 </button>
+
+                <DiaryDayCalories
+                  dayTotalCalories={dayTotalCalories}
+                  targetCaloriesPerDay={targetCaloriesPerDay}
+                />
               </>
             )}
           </>

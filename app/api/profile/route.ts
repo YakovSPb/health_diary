@@ -1,3 +1,8 @@
+import {
+  getDailyCaloriesNeeded,
+  getOptimalWeight,
+  SUGGESTED_CALORIE_DEFICIT,
+} from '@/lib/calories';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
@@ -8,6 +13,7 @@ const profileUpdateSchema = z.object({
   height: z.number().int().min(50).max(250).nullable().optional(),
   weight: z.number().min(20).max(300).nullable().optional(),
   birthDate: z.string().nullable().optional(),
+  calorieDeficit: z.number().int().min(0).max(2000).nullable().optional(),
 });
 
 export async function GET() {
@@ -25,6 +31,7 @@ export async function GET() {
         height: true,
         weight: true,
         birthDate: true,
+        calorieDeficit: true,
       },
     });
 
@@ -32,9 +39,23 @@ export async function GET() {
       return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
     }
 
+    const height = user.height ?? 0;
+    const weight = user.weight ?? 0;
+    const birthDate = user.birthDate ?? null;
+    const optimalWeight =
+      height > 0 ? getOptimalWeight(height) : null;
+    const dailyCaloriesNeeded =
+      height > 0 && weight > 0
+        ? getDailyCaloriesNeeded(height, weight, birthDate)
+        : null;
+    const suggestedDeficit = SUGGESTED_CALORIE_DEFICIT;
+
     return NextResponse.json({
       ...user,
       birthDate: user.birthDate?.toISOString().split('T')[0] ?? null,
+      optimalWeight,
+      dailyCaloriesNeeded,
+      suggestedDeficit,
     });
   } catch (error) {
     console.error('Profile GET error:', error);
@@ -58,7 +79,8 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const { name, height, weight, birthDate } = validationResult.data;
+    const { name, height, weight, birthDate, calorieDeficit } =
+      validationResult.data;
 
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
@@ -66,7 +88,10 @@ export async function PATCH(req: NextRequest) {
         ...(name !== undefined && { name: name === '' ? null : name }),
         ...(height !== undefined && { height }),
         ...(weight !== undefined && { weight }),
-        ...(birthDate !== undefined && { birthDate: birthDate ? new Date(birthDate) : null }),
+        ...(birthDate !== undefined && {
+          birthDate: birthDate ? new Date(birthDate) : null,
+        }),
+        ...(calorieDeficit !== undefined && { calorieDeficit }),
       },
     });
 
@@ -78,6 +103,7 @@ export async function PATCH(req: NextRequest) {
         height: updatedUser.height,
         weight: updatedUser.weight,
         birthDate: updatedUser.birthDate?.toISOString().split('T')[0] ?? null,
+        calorieDeficit: updatedUser.calorieDeficit,
       },
     });
   } catch (error) {
