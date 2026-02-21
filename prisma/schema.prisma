@@ -1,0 +1,122 @@
+// Мой доктор — дневник питания с калориями и БЖУ для похудения
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  password      String?
+
+  height   Int?     // Рост в см
+  weight   Float?   // Вес в кг
+  birthDate DateTime? // Дата рождения (для расчёта возраста)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  meals     Meal[]
+  menuItems MenuItem[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Meal {
+  id             String    @id @default(cuid())
+  userId         String
+  date           DateTime
+  time           String // HH:MM
+  notes          String?
+  totalCarbs     Float    @default(0)
+  totalProtein   Float    @default(0)
+  totalFat       Float    @default(0)
+  totalCalories  Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodItems FoodItem[]
+
+  @@index([userId, date])
+}
+
+model FoodItem {
+  id             String   @id @default(cuid())
+  mealId         String
+  name           String
+  carbsPer100g   Float
+  proteinPer100g Float    @default(0)
+  fatPer100g     Float    @default(0)
+  weightGrams    Float
+  totalCarbs     Float
+  totalProtein   Float    @default(0)
+  totalFat       Float    @default(0)
+  totalCalories  Float    @default(0)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([mealId])
+}
+
+model MenuItem {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  carbsPer100g   Float
+  proteinPer100g Float    @default(0)
+  fatPer100g     Float    @default(0)
+  caloriesPer100g Float   @default(0) // можно вычислять: 4*белки+4*угл+9*жиры
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, name])
+}
