@@ -87,7 +87,7 @@ export default function MainNav({ userName, userEmail }: MainNavProps) {
               key={href}
               href={href}
               onClick={closeMobileMenu}
-              className={`flex items-center px-4 py-3 rounded-lg text-base font-medium min-h-[48px] ${
+              className={`relative z-10 flex items-center px-4 py-3 rounded-lg text-base font-medium min-h-[48px] touch-manipulation ${
                 pathname === href
                   ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
                   : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -96,11 +96,11 @@ export default function MainNav({ userName, userEmail }: MainNavProps) {
               {label}
             </Link>
           ))}
-          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
             <p className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 truncate">
               {userName || userEmail}
             </p>
-            <div className="min-h-[48px] flex items-center">
+            <div className="min-h-[48px] flex items-center px-4 w-fit">
               <LogoutButton />
             </div>
           </div>
