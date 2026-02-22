@@ -141,6 +141,7 @@ export default function MealBlock({
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Ж/100</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">У/100</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Вес, г</th>
+                  <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">К/100</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">ккал</th>
                   <th className="w-[5.5rem]"></th>
                 </tr>

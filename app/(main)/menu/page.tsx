@@ -284,7 +284,7 @@ export default function MenuPage() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Б</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Ж</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">У</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">ккал/100г</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">К/100</th>
                     <th className="w-24 sm:w-32"></th>
                   </tr>
                 </thead>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { caloriesFromBju } from '@/lib/date-utils';
 
 interface FoodItemRowProps {
   id: string;
@@ -220,7 +221,7 @@ export default function FoodItemRow({
           </div>
         </div>
         <p className="text-sm font-semibold text-gray-900 dark:text-white">
-          Б: {totalProtein.toFixed(0)} · Ж: {totalFat.toFixed(0)} · У: {totalCarbs.toFixed(0)} · {Math.round(totalCalories)} ккал
+          К/100: {Math.round(caloriesFromBju(proteinNum, carbsNum, fatNum))} · ккал: {Math.round(totalCalories)}
         </p>
       </div>
     );
@@ -290,6 +291,9 @@ export default function FoodItemRow({
           step={1}
           className="w-16 sm:w-20 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-gray-900 dark:text-white min-h-[44px]"
         />
+      </td>
+      <td className="py-3 px-2 sm:px-4 text-gray-900 dark:text-white text-sm">
+        {Math.round(caloriesFromBju(proteinNum, carbsNum, fatNum))}
       </td>
       <td className="py-3 px-2 sm:px-4 text-gray-900 dark:text-white font-semibold text-sm">
         {Math.round(totalCalories)}
