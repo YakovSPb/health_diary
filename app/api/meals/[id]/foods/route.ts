@@ -10,8 +10,8 @@ function caloriesFromBju(protein: number, carbs: number, fat: number): number {
 const createFoodSchema = z.object({
   name: z.string().min(1),
   carbsPer100g: z.number().min(0),
-  proteinPer100g: z.number().min(0).optional(),
-  fatPer100g: z.number().min(0).optional(),
+  proteinPer100g: z.number().min(0).nullish().transform((v) => (v ?? 0)),
+  fatPer100g: z.number().min(0).nullish().transform((v) => (v ?? 0)),
   weightGrams: z.number().min(0),
   order: z.number().int().min(0).optional(),
 });
