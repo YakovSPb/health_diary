@@ -32,7 +32,9 @@ export function middleware(req: NextRequest) {
   const isLoggedIn = hasSessionCookie(req);
   const isAuthPage =
     req.nextUrl.pathname.startsWith('/login') ||
-    req.nextUrl.pathname.startsWith('/register');
+    req.nextUrl.pathname.startsWith('/register') ||
+    req.nextUrl.pathname.startsWith('/forgot-password') ||
+    req.nextUrl.pathname.startsWith('/reset-password');
 
   const protectedPaths = [
     '/diary',
@@ -72,5 +74,7 @@ export const config = {
     '/api/profile/:path*',
     '/login',
     '/register',
+    '/forgot-password',
+    '/reset-password',
   ],
 };

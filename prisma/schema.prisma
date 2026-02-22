@@ -68,6 +68,18 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Запрос на сброс пароля: по email создаётся токен, пользователю показывается ссылка
+model PasswordResetRequest {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([email])
+}
+
 model Meal {
   id             String    @id @default(cuid())
   userId         String

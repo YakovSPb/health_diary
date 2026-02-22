@@ -51,6 +51,9 @@ export default function MainNav({ userName, userEmail }: MainNavProps) {
             <span className="hidden sm:inline text-sm text-gray-700 dark:text-gray-300 truncate max-w-[120px] lg:max-w-[200px]">
               {userName || userEmail}
             </span>
+            <div className="hidden sm:block">
+              <LogoutButton />
+            </div>
             <button
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
