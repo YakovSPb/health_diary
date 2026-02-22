@@ -13,6 +13,7 @@ const createMenuSchema = z.object({
   proteinPer100g: z.coerce.number().min(0).optional(),
   fatPer100g: z.coerce.number().min(0).optional(),
   caloriesPer100g: z.coerce.number().min(0).optional(),
+  hasSugar: z.boolean().optional(),
 });
 
 const DEFAULT_LIMIT = 10;
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const hasSugar = validated.hasSugar ?? false;
     const item = existing
       ? await prisma.menuItem.update({
           where: { id: existing.id },
@@ -101,6 +103,7 @@ export async function POST(request: NextRequest) {
             proteinPer100g: protein,
             fatPer100g: fat,
             caloriesPer100g,
+            hasSugar,
           },
         })
       : await prisma.menuItem.create({
@@ -111,6 +114,7 @@ export async function POST(request: NextRequest) {
             proteinPer100g: protein,
             fatPer100g: fat,
             caloriesPer100g,
+            hasSugar,
           },
         });
 

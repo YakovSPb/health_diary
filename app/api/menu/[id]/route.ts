@@ -13,6 +13,7 @@ const updateMenuSchema = z.object({
   proteinPer100g: z.coerce.number().min(0).optional(),
   fatPer100g: z.coerce.number().min(0).optional(),
   caloriesPer100g: z.coerce.number().min(0).optional(),
+  hasSugar: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -50,6 +51,7 @@ export async function PATCH(
         proteinPer100g: protein,
         fatPer100g: fat,
         caloriesPer100g,
+        ...(validated.hasSugar !== undefined && { hasSugar: validated.hasSugar }),
       },
     });
 

@@ -191,7 +191,7 @@ export default function DiaryPage() {
           carbsPer100g = first.carbsPer100g;
           proteinPer100g = first.proteinPer100g ?? 0;
           fatPer100g = first.fatPer100g ?? 0;
-          sugarsPer100g = undefined;
+          sugarsPer100g = first.hasSugar ? 1 : undefined;
         } else {
           // Не нашли в меню — запрос к parse-food (diabalance)
           const parseRes = await fetch('/api/parse-food', {

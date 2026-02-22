@@ -128,6 +128,7 @@ model MenuItem {
   proteinPer100g Float    @default(0)
   fatPer100g     Float    @default(0)
   caloriesPer100g Float   @default(0) // можно вычислять: 4*белки+4*угл+9*жиры
+  hasSugar       Boolean  @default(false) // В блюде есть сахар (подсветка в дневнике)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

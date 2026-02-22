@@ -10,6 +10,7 @@ interface MenuItem {
   proteinPer100g: number;
   fatPer100g: number;
   caloriesPer100g: number;
+  hasSugar: boolean;
   createdAt: string;
 }
 
@@ -35,10 +36,12 @@ export default function MenuPage() {
   const [editProtein, setEditProtein] = useState('');
   const [editFat, setEditFat] = useState('');
   const [editCalories, setEditCalories] = useState('');
+  const [editHasSugar, setEditHasSugar] = useState(false);
   const [addName, setAddName] = useState('');
   const [addCarbs, setAddCarbs] = useState('');
   const [addProtein, setAddProtein] = useState('');
   const [addFat, setAddFat] = useState('');
+  const [addHasSugar, setAddHasSugar] = useState(false);
 
   const fetchItems = useCallback(
     async (page = 1) => {
@@ -82,6 +85,7 @@ export default function MenuPage() {
     setEditProtein(String(item.proteinPer100g));
     setEditFat(String(item.fatPer100g));
     setEditCalories(String(item.caloriesPer100g));
+    setEditHasSugar(item.hasSugar ?? false);
   };
 
   const cancelEdit = () => {
@@ -91,6 +95,7 @@ export default function MenuPage() {
     setEditProtein('');
     setEditFat('');
     setEditCalories('');
+    setEditHasSugar(false);
   };
 
   const saveEdit = async () => {
@@ -110,6 +115,7 @@ export default function MenuPage() {
           proteinPer100g: Number.isNaN(proteinNum) ? 0 : proteinNum,
           fatPer100g: Number.isNaN(fatNum) ? 0 : fatNum,
           caloriesPer100g: Number.isNaN(calNum) ? undefined : calNum,
+          hasSugar: editHasSugar,
         }),
       });
       if (res.ok) {
@@ -138,6 +144,7 @@ export default function MenuPage() {
           carbsPer100g: carbsNum,
           proteinPer100g: Number.isNaN(proteinNum) ? 0 : proteinNum,
           fatPer100g: Number.isNaN(fatNum) ? 0 : fatNum,
+          hasSugar: addHasSugar,
         }),
       });
       if (res.ok) {
@@ -147,6 +154,7 @@ export default function MenuPage() {
         setAddCarbs('');
         setAddProtein('');
         setAddFat('');
+        setAddHasSugar(false);
         if (pagination) {
           setPagination((p) => (p ? { ...p, total: p.total + 1 } : null));
         }
@@ -196,7 +204,7 @@ export default function MenuPage() {
 
         <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Добавить блюдо</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <div>
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Название</label>
               <input
@@ -246,6 +254,18 @@ export default function MenuPage() {
                 placeholder="0"
               />
             </div>
+            <div className="flex items-center gap-2 min-h-[44px]">
+              <input
+                type="checkbox"
+                id="add-has-sugar"
+                checked={addHasSugar}
+                onChange={(e) => setAddHasSugar(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="add-has-sugar" className="text-sm text-gray-700 dark:text-gray-300">
+                В блюде есть сахар
+              </label>
+            </div>
             <div>
               <button
                 type="button"
@@ -285,6 +305,7 @@ export default function MenuPage() {
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Ж</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">У</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">К/100</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300" title="В блюде есть сахар">Сахар</th>
                     <th className="w-24 sm:w-32"></th>
                   </tr>
                 </thead>
@@ -361,6 +382,23 @@ export default function MenuPage() {
                           />
                         ) : (
                           <span className="text-gray-900 dark:text-white">{Math.round(item.caloriesPer100g)}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        {editingId === item.id ? (
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={editHasSugar}
+                              onChange={(e) => setEditHasSugar(e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">есть сахар</span>
+                          </label>
+                        ) : (
+                          <span className="text-gray-900 dark:text-white" title="В блюде есть сахар">
+                            {item.hasSugar ? '✓' : '—'}
+                          </span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">

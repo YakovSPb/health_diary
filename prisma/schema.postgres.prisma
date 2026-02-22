@@ -82,6 +82,7 @@ model MenuItem {
   userId       String
   name         String
   carbsPer100g Float
+  hasSugar     Boolean  @default(false) // В блюде есть сахар (подсветка в дневнике)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
