@@ -166,16 +166,17 @@ model Meal {
 
 // Продукт в приёме пищи
 model FoodItem {
-  id            String   @id @default(cuid())
-  mealId        String
-  name          String
-  carbsPer100g  Float    // Углеводы на 100г
-  proteinPer100g Float?  // Белки на 100г (для будущего БЖУ анализа)
-  fatPer100g    Float?   // Жиры на 100г
-  weightGrams   Float    // Вес порции в граммах
-  totalCarbs    Float    // Расчётное поле
-  order         Int      @default(0)
-  createdAt     DateTime @default(now())
+  id             String   @id @default(cuid())
+  mealId         String
+  name           String
+  carbsPer100g   Float    // Углеводы на 100г
+  proteinPer100g Float?   // Белки на 100г (для будущего БЖУ анализа)
+  fatPer100g     Float?   // Жиры на 100г
+  sugarsPer100g  Float?   // Сахар на 100г (из DeepSeek), для подсветки названия
+  weightGrams    Float    // Вес порции в граммах
+  totalCarbs     Float    // Расчётное поле
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
   
   meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
   

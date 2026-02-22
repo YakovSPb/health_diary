@@ -106,6 +106,7 @@ model FoodItem {
   carbsPer100g   Float
   proteinPer100g Float    @default(0)
   fatPer100g     Float    @default(0)
+  sugarsPer100g  Float?   // Сахар на 100 г (из DeepSeek), для подсветки названия
   weightGrams    Float
   totalCarbs     Float
   totalProtein   Float    @default(0)

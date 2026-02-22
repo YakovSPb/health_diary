@@ -14,6 +14,7 @@ interface FoodItem {
   carbsPer100g: number;
   proteinPer100g: number;
   fatPer100g: number;
+  sugarsPer100g?: number | null;
   weightGrams: number;
   totalCarbs: number;
   totalProtein: number;
@@ -175,6 +176,7 @@ export default function DiaryPage() {
       let carbsPer100g: number;
       let proteinPer100g: number;
       let fatPer100g: number;
+      let sugarsPer100g: number | undefined;
 
       const menuRes = await fetch(
         `/api/menu?search=${encodeURIComponent(productName)}&limit=5`
@@ -189,6 +191,7 @@ export default function DiaryPage() {
           carbsPer100g = first.carbsPer100g;
           proteinPer100g = first.proteinPer100g ?? 0;
           fatPer100g = first.fatPer100g ?? 0;
+          sugarsPer100g = undefined;
         } else {
           // Не нашли в меню — запрос к parse-food (diabalance)
           const parseRes = await fetch('/api/parse-food', {
@@ -203,6 +206,8 @@ export default function DiaryPage() {
             carbsPer100g = Number(food.carbsPer100g) || 0;
             proteinPer100g = Number(food.proteinPer100g) ?? 0;
             fatPer100g = Number(food.fatPer100g) ?? 0;
+            const s = Number(food.sugarsPer100g);
+            sugarsPer100g = Number.isNaN(s) ? undefined : Math.max(0, s);
             if (typeof food.weightGrams === 'number' && food.weightGrams > 0) {
               weightGrams = food.weightGrams;
             }
@@ -211,6 +216,7 @@ export default function DiaryPage() {
             carbsPer100g = 0;
             proteinPer100g = 0;
             fatPer100g = 0;
+            sugarsPer100g = undefined;
           }
         }
       } else {
@@ -227,6 +233,8 @@ export default function DiaryPage() {
           carbsPer100g = Number(food.carbsPer100g) || 0;
           proteinPer100g = Number(food.proteinPer100g) ?? 0;
           fatPer100g = Number(food.fatPer100g) ?? 0;
+          const s = Number(food.sugarsPer100g);
+          sugarsPer100g = Number.isNaN(s) ? undefined : Math.max(0, s);
           if (typeof food.weightGrams === 'number' && food.weightGrams > 0) {
             weightGrams = food.weightGrams;
           }
@@ -235,6 +243,7 @@ export default function DiaryPage() {
           carbsPer100g = 0;
           proteinPer100g = 0;
           fatPer100g = 0;
+          sugarsPer100g = undefined;
         }
       }
 
@@ -246,6 +255,7 @@ export default function DiaryPage() {
           carbsPer100g,
           proteinPer100g,
           fatPer100g,
+          ...(sugarsPer100g !== undefined && { sugarsPer100g }),
           weightGrams,
         }),
       });

@@ -12,6 +12,7 @@ const updateFoodSchema = z.object({
   carbsPer100g: z.number().min(0).optional(),
   proteinPer100g: z.number().min(0).nullish().transform((v) => (v === null ? 0 : v)),
   fatPer100g: z.number().min(0).nullish().transform((v) => (v === null ? 0 : v)),
+  sugarsPer100g: z.number().min(0).nullish(),
   weightGrams: z.number().min(0).optional(),
 });
 
@@ -70,6 +71,7 @@ export async function PATCH(
         ...(validatedData.carbsPer100g !== undefined && { carbsPer100g: newCarbs }),
         ...(validatedData.proteinPer100g !== undefined && { proteinPer100g: newProtein }),
         ...(validatedData.fatPer100g !== undefined && { fatPer100g: newFat }),
+        ...(validatedData.sugarsPer100g !== undefined && { sugarsPer100g: validatedData.sugarsPer100g }),
         ...(validatedData.weightGrams !== undefined && { weightGrams: newWeight }),
         totalCarbs,
         totalProtein,

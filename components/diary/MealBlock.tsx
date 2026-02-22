@@ -10,6 +10,7 @@ interface FoodItem {
   carbsPer100g: number;
   proteinPer100g: number;
   fatPer100g: number;
+  sugarsPer100g?: number | null;
   weightGrams: number;
   totalCarbs: number;
   totalProtein: number;
@@ -169,6 +170,7 @@ export default function MealBlock({
                         ? (name, carbs, protein, fat) => onSaveToMenu(id, item.id, name, carbs, protein, fat)
                         : undefined
                     }
+                    hasSugar={(item.sugarsPer100g ?? 0) > 0}
                   />
                 ))}
               </tbody>
@@ -197,6 +199,7 @@ export default function MealBlock({
                     ? (name, carbs, protein, fat) => onSaveToMenu(id, item.id, name, carbs, protein, fat)
                     : undefined
                 }
+                hasSugar={(item.sugarsPer100g ?? 0) > 0}
               />
             ))}
           </div>

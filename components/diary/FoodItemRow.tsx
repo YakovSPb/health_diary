@@ -25,6 +25,8 @@ interface FoodItemRowProps {
   variant?: 'table' | 'card';
   savedToMenu?: boolean;
   onSaveToMenu?: (name: string, carbs: number, protein: number, fat: number) => void;
+  /** Если true, название отображается красным (продукт содержит сахар по данным DeepSeek). */
+  hasSugar?: boolean;
 }
 
 const inputBase =
@@ -46,7 +48,11 @@ export default function FoodItemRow({
   variant = 'table',
   savedToMenu = false,
   onSaveToMenu,
+  hasSugar = false,
 }: FoodItemRowProps) {
+  const nameInputClass = hasSugar
+    ? 'text-red-600 dark:text-red-400'
+    : 'text-gray-900 dark:text-white';
   const [name, setName] = useState(initialName);
   const [carbsPer100g, setCarbsPer100g] = useState(initialCarbs.toString());
   const [proteinPer100g, setProteinPer100g] = useState(initialProtein.toString());
@@ -154,7 +160,7 @@ export default function FoodItemRow({
             onChange={(e) => setName(e.target.value)}
             onFocus={() => setIsEditing(true)}
             onBlur={saveOnBlur}
-            className={`flex-1 min-w-0 ${inputBase}`}
+            className={`flex-1 min-w-0 ${inputBase} ${nameInputClass}`}
             placeholder="Название"
           />
           <div className="flex items-center gap-1 shrink-0">
@@ -236,7 +242,7 @@ export default function FoodItemRow({
           onChange={(e) => setName(e.target.value)}
           onFocus={() => setIsEditing(true)}
           onBlur={saveOnBlur}
-          className="w-full min-w-0 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-base text-gray-900 dark:text-white min-h-[44px]"
+          className={`w-full min-w-0 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-base min-h-[44px] ${nameInputClass}`}
           placeholder="Название"
         />
       </td>

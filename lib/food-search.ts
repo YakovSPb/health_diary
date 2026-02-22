@@ -5,6 +5,8 @@ export interface FoodSearchResult {
   carbsPer100g: number;
   proteinPer100g: number;
   fatPer100g: number;
+  /** Сахар на 100 г (из DeepSeek). В меню не хранится. */
+  sugarsPer100g?: number;
 }
 
 const MIN_STEM_LEN = 3;

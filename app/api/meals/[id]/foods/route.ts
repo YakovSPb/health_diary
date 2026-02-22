@@ -12,6 +12,7 @@ const createFoodSchema = z.object({
   carbsPer100g: z.number().min(0),
   proteinPer100g: z.number().min(0).nullish().transform((v) => (v ?? 0)),
   fatPer100g: z.number().min(0).nullish().transform((v) => (v ?? 0)),
+  sugarsPer100g: z.number().min(0).nullish(),
   weightGrams: z.number().min(0),
   order: z.number().int().min(0).optional(),
 });
@@ -58,6 +59,7 @@ export async function POST(
         carbsPer100g: carbs,
         proteinPer100g: protein,
         fatPer100g: fat,
+        sugarsPer100g: validatedData.sugarsPer100g ?? undefined,
         weightGrams: weight,
         totalCarbs,
         totalProtein,
