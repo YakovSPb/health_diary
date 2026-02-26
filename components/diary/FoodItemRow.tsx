@@ -23,6 +23,8 @@ interface FoodItemRowProps {
   }) => void;
   onDelete: (id: string) => void;
   variant?: 'table' | 'card';
+  /** true, если продукт добавлен из меню (зелёный кружок слева от названия) */
+  fromMenu?: boolean;
   savedToMenu?: boolean;
   onSaveToMenu?: (name: string, carbs: number, protein: number, fat: number) => void;
   /** Если true, название отображается красным (продукт содержит сахар по данным DeepSeek). */
@@ -46,6 +48,7 @@ export default function FoodItemRow({
   onUpdate,
   onDelete,
   variant = 'table',
+   fromMenu = false,
   savedToMenu = false,
   onSaveToMenu,
   hasSugar = false,
@@ -70,6 +73,15 @@ export default function FoodItemRow({
   const proteinNum = parseFloat(proteinPer100g);
   const fatNum = parseFloat(fatPer100g);
   const hasValidBju = !Number.isNaN(carbsNum) && !Number.isNaN(proteinNum) && !Number.isNaN(fatNum);
+  const [caloriesPer100Input, setCaloriesPer100Input] = useState(
+    hasValidBju ? Math.round(caloriesFromBju(proteinNum, carbsNum, fatNum)).toString() : ''
+  );
+  const caloriesPer100Num = parseFloat(caloriesPer100Input);
+  const weightNumForCalories = parseFloat(weightGrams);
+  const displayCalories =
+    !Number.isNaN(caloriesPer100Num) && !Number.isNaN(weightNumForCalories)
+      ? (caloriesPer100Num * weightNumForCalories) / 100
+      : totalCalories;
   const hasChangesForMenu =
     onSaveToMenu &&
     (name.trim() !== baselineMenu.name ||
@@ -150,19 +162,33 @@ export default function FoodItemRow({
     </span>
   ) : null;
 
+  const handleCaloriesPer100Change = (value: string) => {
+    setIsEditing(true);
+    setCaloriesPer100Input(value);
+  };
+
   if (variant === 'card') {
     return (
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
         <div className="flex gap-2 items-start justify-between">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onFocus={() => setIsEditing(true)}
-            onBlur={saveOnBlur}
-            className={`flex-1 min-w-0 ${inputBase} ${nameInputClass}`}
-            placeholder="Название"
-          />
+          <div className="flex gap-2 flex-1 min-w-0 items-start">
+            {fromMenu && (
+              <span
+                className="shrink-0 w-2.5 h-2.5 rounded-full bg-green-500 dark:bg-green-400 mt-[0.6rem]"
+                title="Из меню"
+                aria-hidden
+              />
+            )}
+            <textarea
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={() => setIsEditing(true)}
+              onBlur={saveOnBlur}
+              className={`flex-1 min-w-0 ${inputBase} ${nameInputClass} resize-none leading-snug`}
+              placeholder="Название"
+              rows={2}
+            />
+          </div>
           <div className="flex items-center gap-1 shrink-0">
             {saveToMenuBtn}
             {deleteBtn}
@@ -226,25 +252,46 @@ export default function FoodItemRow({
             />
           </div>
         </div>
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">
-          К/100: {Math.round(caloriesFromBju(proteinNum, carbsNum, fatNum))} · ккал: {Math.round(totalCalories)}
-        </p>
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+          <div className="flex items-center gap-1">
+            <span>К/100:</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={caloriesPer100Input}
+              onChange={(e) => handleCaloriesPer100Change(e.target.value)}
+              className="w-20 bg-transparent border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm"
+              min={0}
+              step={1}
+            />
+          </div>
+          <span>· ккал: {Math.round(displayCalories)}</span>
+        </div>
       </div>
     );
   }
 
   return (
     <tr className="border-t border-gray-200 dark:border-gray-700">
-      <td className="py-3 px-2 sm:px-4">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onFocus={() => setIsEditing(true)}
-          onBlur={saveOnBlur}
-          className={`w-full min-w-0 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-base min-h-[44px] ${nameInputClass}`}
-          placeholder="Название"
-        />
+      <td className="py-3 px-2 sm:px-4 align-top">
+        <div className="flex gap-2 items-center min-w-0">
+          {fromMenu && (
+            <span
+              className="shrink-0 w-2.5 h-2.5 rounded-full bg-green-500 dark:bg-green-400"
+              title="Из меню"
+              aria-hidden
+            />
+          )}
+          <textarea
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onFocus={() => setIsEditing(true)}
+            onBlur={saveOnBlur}
+            className={`w-full min-w-0 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-base min-h-[44px] ${nameInputClass} resize-none leading-snug`}
+            placeholder="Название"
+            rows={2}
+          />
+        </div>
       </td>
       <td className="py-3 px-2 sm:px-4">
         <input
@@ -299,10 +346,18 @@ export default function FoodItemRow({
         />
       </td>
       <td className="py-3 px-2 sm:px-4 text-gray-900 dark:text-white text-sm">
-        {Math.round(caloriesFromBju(proteinNum, carbsNum, fatNum))}
+        <input
+          type="number"
+          inputMode="decimal"
+          value={caloriesPer100Input}
+          onChange={(e) => handleCaloriesPer100Change(e.target.value)}
+          min={0}
+          step={1}
+          className="w-16 sm:w-20 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-gray-900 dark:text-white min-h-[44px]"
+        />
       </td>
       <td className="py-3 px-2 sm:px-4 text-gray-900 dark:text-white font-semibold text-sm">
-        {Math.round(totalCalories)}
+        {Math.round(displayCalories)}
       </td>
       <td className="py-3 px-2 sm:pl-4 pr-0 text-right">
         <div className="flex items-center justify-end gap-1">

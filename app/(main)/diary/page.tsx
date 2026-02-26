@@ -21,6 +21,8 @@ interface FoodItem {
   totalFat: number;
   totalCalories: number;
   order: number;
+  /** ID пункта меню, если продукт добавлен из меню */
+  menuItemId?: string | null;
 }
 
 interface Meal {
@@ -61,6 +63,8 @@ export default function DiaryPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savedToMenuFoodIds, setSavedToMenuFoodIds] = useState<Set<string>>(new Set());
+  /** ID продуктов, добавленных из меню в этой сессии (для зелёной точки «из меню») */
+  const [foodIdsFromMenu, setFoodIdsFromMenu] = useState<Set<string>>(new Set());
   const [profileCalories, setProfileCalories] = useState<ProfileCalories | null>(null);
 
   const fetchProfile = useCallback(async () => {
@@ -177,6 +181,7 @@ export default function DiaryPage() {
       let proteinPer100g: number;
       let fatPer100g: number;
       let sugarsPer100g: number | undefined;
+      let menuItemId: string | undefined;
 
       const menuRes = await fetch(
         `/api/menu?search=${encodeURIComponent(productName)}&limit=5`
@@ -192,6 +197,7 @@ export default function DiaryPage() {
           proteinPer100g = first.proteinPer100g ?? 0;
           fatPer100g = first.fatPer100g ?? 0;
           sugarsPer100g = first.hasSugar ? 1 : undefined;
+          menuItemId = first.id;
         } else {
           // Не нашли в меню — запрос к parse-food (diabalance)
           const parseRes = await fetch('/api/parse-food', {
@@ -247,31 +253,42 @@ export default function DiaryPage() {
         }
       }
 
+      const body: Record<string, unknown> = {
+        name,
+        carbsPer100g,
+        proteinPer100g,
+        fatPer100g,
+        ...(sugarsPer100g !== undefined && { sugarsPer100g }),
+        weightGrams,
+      };
+      if (menuItemId) body.menuItemId = menuItemId;
+
       const response = await fetch(`/api/meals/${mealId}/foods`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          carbsPer100g,
-          proteinPer100g,
-          fatPer100g,
-          ...(sugarsPer100g !== undefined && { sugarsPer100g }),
-          weightGrams,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
         const data = await response.json();
+        const newItem = data.foodItem as FoodItem;
+        const added: FoodItem = {
+          ...newItem,
+          menuItemId: newItem.menuItemId ?? menuItemId ?? null,
+        };
+        if (menuItemId) {
+          setFoodIdsFromMenu((prev) => new Set(prev).add(added.id));
+        }
         setMeals(
           meals.map((m) => {
             if (m.id === mealId) {
               return {
                 ...m,
-                foodItems: [...m.foodItems, data.foodItem],
-                totalCarbs: m.totalCarbs + data.foodItem.totalCarbs,
-                totalProtein: m.totalProtein + data.foodItem.totalProtein,
-                totalFat: m.totalFat + data.foodItem.totalFat,
-                totalCalories: m.totalCalories + data.foodItem.totalCalories,
+                foodItems: [...m.foodItems, added],
+                totalCarbs: m.totalCarbs + added.totalCarbs,
+                totalProtein: m.totalProtein + added.totalProtein,
+                totalFat: m.totalFat + added.totalFat,
+                totalCalories: m.totalCalories + added.totalCalories,
               };
             }
             return m;
@@ -448,6 +465,7 @@ export default function DiaryPage() {
                     onDelete={handleDeleteMeal}
                     onAnalyze={() => {}}
                     savedToMenuFoodIds={savedToMenuFoodIds}
+                    foodIdsFromMenu={foodIdsFromMenu}
                     onSaveToMenu={handleSaveToMenu}
                   />
                 ))}

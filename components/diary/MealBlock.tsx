@@ -17,6 +17,8 @@ interface FoodItem {
   totalFat: number;
   totalCalories: number;
   order: number;
+  /** ID пункта меню, если продукт добавлен из меню */
+  menuItemId?: string | null;
 }
 
 interface MealBlockProps {
@@ -41,6 +43,8 @@ interface MealBlockProps {
   onDelete: (id: string) => void;
   onAnalyze: (id: string) => void;
   savedToMenuFoodIds?: Set<string>;
+  /** ID продуктов, добавленных из меню в этой сессии (для зелёной точки «из меню») */
+  foodIdsFromMenu?: Set<string>;
   onSaveToMenu?: (mealId: string, foodId: string, name: string, carbs: number, protein: number, fat: number) => void;
 }
 
@@ -60,6 +64,7 @@ export default function MealBlock({
   onDelete,
   onAnalyze,
   savedToMenuFoodIds,
+  foodIdsFromMenu,
   onSaveToMenu,
 }: MealBlockProps) {
   const [time, setTime] = useState(initialTime);
@@ -164,6 +169,7 @@ export default function MealBlock({
                     onUpdate={(foodId, data) => onUpdateFood(id, foodId, data)}
                     onDelete={(foodId) => onDeleteFood(id, foodId)}
                     variant="table"
+                    fromMenu={!!item.menuItemId || foodIdsFromMenu?.has(item.id)}
                     savedToMenu={savedToMenuFoodIds?.has(item.id)}
                     onSaveToMenu={
                       onSaveToMenu
@@ -193,6 +199,7 @@ export default function MealBlock({
                 onUpdate={(foodId, data) => onUpdateFood(id, foodId, data)}
                 onDelete={(foodId) => onDeleteFood(id, foodId)}
                 variant="card"
+                fromMenu={!!item.menuItemId || foodIdsFromMenu?.has(item.id)}
                 savedToMenu={savedToMenuFoodIds?.has(item.id)}
                 onSaveToMenu={
                   onSaveToMenu
