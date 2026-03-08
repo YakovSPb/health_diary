@@ -142,7 +142,7 @@ export default function MealBlock({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Название</th>
+                  <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 min-w-32">Название</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Б/100</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Ж/100</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">У/100</th>

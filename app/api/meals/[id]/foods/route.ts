@@ -15,6 +15,7 @@ const createFoodSchema = z.object({
   sugarsPer100g: z.number().min(0).nullish(),
   weightGrams: z.number().min(0),
   order: z.number().int().min(0).optional(),
+  menuItemId: z.string().min(1).nullish(),
 });
 
 export async function POST(
@@ -66,6 +67,7 @@ export async function POST(
         totalFat,
         totalCalories,
         order,
+        menuItemId: validatedData.menuItemId ?? undefined,
       },
     });
 

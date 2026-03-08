@@ -23,6 +23,8 @@ interface FoodItem {
   order: number;
   /** ID пункта меню, если продукт добавлен из меню */
   menuItemId?: string | null;
+  /** Продукт сохранён в меню (приходит с API после перезагрузки) */
+  savedToMenu?: boolean;
 }
 
 interface Meal {
@@ -105,7 +107,14 @@ export default function DiaryPage() {
       const response = await fetch(`/api/meals?date=${dateStr}`);
       if (response.ok) {
         const data = await response.json();
-        setMeals(data.meals || []);
+        const loadedMeals: Meal[] = data.meals || [];
+        setMeals(loadedMeals);
+        const savedIds = new Set(
+          loadedMeals.flatMap((m) =>
+            m.foodItems.filter((f) => f.savedToMenu).map((f) => f.id)
+          )
+        );
+        setSavedToMenuFoodIds(savedIds);
       }
     } catch (error) {
       console.error('Error fetching meals:', error);
@@ -349,8 +358,8 @@ export default function DiaryPage() {
   };
 
   const handleSaveToMenu = async (
-    _mealId: string,
-    _foodId: string,
+    mealId: string,
+    foodId: string,
     name: string,
     carbs: number,
     protein: number,
@@ -368,8 +377,24 @@ export default function DiaryPage() {
         }),
       });
       if (response.ok) {
-        const data = await response.json();
-        setSavedToMenuFoodIds((prev) => new Set(prev).add(_foodId));
+        setSavedToMenuFoodIds((prev) => new Set(prev).add(foodId));
+        await fetch(`/api/meals/${mealId}/foods/${foodId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ savedToMenu: true }),
+        });
+        setMeals((prev) =>
+          prev.map((m) =>
+            m.id === mealId
+              ? {
+                  ...m,
+                  foodItems: m.foodItems.map((f) =>
+                    f.id === foodId ? { ...f, savedToMenu: true } : f
+                  ),
+                }
+              : m
+          )
+        );
       }
     } catch (error) {
       console.error('Error saving to menu:', error);

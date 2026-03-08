@@ -14,6 +14,7 @@ const updateFoodSchema = z.object({
   fatPer100g: z.number().min(0).nullish().transform((v) => (v === null ? 0 : v)),
   sugarsPer100g: z.number().min(0).nullish(),
   weightGrams: z.number().min(0).optional(),
+  savedToMenu: z.boolean().optional(),
 });
 
 async function recalcMealTotals(mealId: string) {
@@ -73,6 +74,7 @@ export async function PATCH(
         ...(validatedData.fatPer100g !== undefined && { fatPer100g: newFat }),
         ...(validatedData.sugarsPer100g !== undefined && { sugarsPer100g: validatedData.sugarsPer100g }),
         ...(validatedData.weightGrams !== undefined && { weightGrams: newWeight }),
+        ...(validatedData.savedToMenu !== undefined && { savedToMenu: validatedData.savedToMenu }),
         totalCarbs,
         totalProtein,
         totalFat,

@@ -113,6 +113,10 @@ model FoodItem {
   totalFat       Float    @default(0)
   totalCalories  Float    @default(0)
   order          Int      @default(0)
+  /** ID пункта меню, если продукт добавлен из меню (для зелёного кружка после перезагрузки) */
+  menuItemId     String?
+  /** Продукт сохранён в меню (для индикатора после перезагрузки) */
+  savedToMenu    Boolean  @default(false)
   createdAt      DateTime @default(now())
 
   meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
