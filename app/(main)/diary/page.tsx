@@ -4,7 +4,7 @@ import DiaryDayCalories from '@/components/diary/DiaryDayCalories';
 import DiaryHeader from '@/components/diary/DiaryHeader';
 import MealBlock from '@/components/diary/MealBlock';
 import { getTargetCaloriesPerDay } from '@/lib/calories';
-import { formatDateForApi, getCurrentTime, getMealNameWithOrder } from '@/lib/date-utils';
+import { formatDateForApi, getCurrentTime, getMealNameWithOrder, isMealWithin30Minutes } from '@/lib/date-utils';
 import { useSession } from 'next-auth/react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -501,6 +501,7 @@ export default function DiaryPage() {
                     savedToMenuFoodIds={savedToMenuFoodIds}
                     foodIdsFromMenu={foodIdsFromMenu}
                     onSaveToMenu={handleSaveToMenu}
+                    defaultExpanded={isMealWithin30Minutes(selectedDate, meal.time)}
                   />
                 ))}
 

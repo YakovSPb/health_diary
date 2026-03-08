@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import FoodItemRow from './FoodItemRow';
 import VoiceInput from './VoiceInput';
 
@@ -46,6 +46,8 @@ interface MealBlockProps {
   /** ID продуктов, добавленных из меню в этой сессии (для зелёной точки «из меню») */
   foodIdsFromMenu?: Set<string>;
   onSaveToMenu?: (mealId: string, foodId: string, name: string, carbs: number, protein: number, fat: number, caloriesPer100g?: number) => void;
+  /** При открытии страницы: развёрнут только если с момента приёма прошло не более 30 минут */
+  defaultExpanded?: boolean;
 }
 
 export default function MealBlock({
@@ -66,11 +68,17 @@ export default function MealBlock({
   savedToMenuFoodIds,
   foodIdsFromMenu,
   onSaveToMenu,
+  defaultExpanded = false,
 }: MealBlockProps) {
   const [time, setTime] = useState(initialTime);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAddingFood, setIsAddingFood] = useState(false);
+
+  useEffect(() => {
+    setIsExpanded(defaultExpanded);
+  }, [defaultExpanded]);
 
   const handleTimeChange = (newTime: string) => {
     setTime(newTime);
@@ -110,18 +118,48 @@ export default function MealBlock({
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 sm:p-6 mb-4">
       <div className="flex gap-3 mb-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setIsExpanded((e) => !e)}
+          className={`${touchIconBtn} shrink-0 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400`}
+          title={isExpanded ? 'Свернуть' : 'Развернуть'}
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? 'Свернуть приём' : 'Развернуть приём'}
+        >
+          <svg
+            className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setIsExpanded((e) => !e)}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setIsExpanded((prev) => !prev)}
+          className="flex flex-wrap items-center gap-3 flex-1 min-w-0 cursor-pointer select-none"
+          aria-expanded={isExpanded}
+        >
           <input
             type="time"
             value={time}
             onChange={(e) => handleTimeChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
             className="text-base px-3 py-2.5 sm:px-4 sm:py-2 font-semibold border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white min-h-[44px]"
           />
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
             {mealName}
           </h3>
+          {foodItems.length > 0 && (
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              Б: {totalProtein.toFixed(0)} · Ж: {totalFat.toFixed(0)} · У: {totalCarbs.toFixed(0)} · {Math.round(totalCalories)} ккал
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={() => onDelete(id)}
@@ -136,7 +174,7 @@ export default function MealBlock({
         </div>
       </div>
 
-      {foodItems.length > 0 && (
+      {isExpanded && foodItems.length > 0 && (
         <>
           <div className="mb-4 overflow-x-auto hidden md:block">
             <table className="w-full">
@@ -215,51 +253,55 @@ export default function MealBlock({
         </>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center border-t border-gray-200 dark:border-gray-700 pt-4">
-        <VoiceInput onResult={handleAddFoodFromVoice} disabled={isAddingFood} />
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-          {foodItems.length > 0 && (
-            <div className="flex items-center gap-2 text-sm sm:text-base">
-              <span className="font-bold text-blue-600 dark:text-blue-400">
-                Б: {totalProtein.toFixed(0)} · Ж: {totalFat.toFixed(0)} · У: {totalCarbs.toFixed(0)} · {Math.round(totalCalories)} ккал
-              </span>
+      {isExpanded && (
+        <>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center border-t border-gray-200 dark:border-gray-700 pt-4">
+            <VoiceInput onResult={handleAddFoodFromVoice} disabled={isAddingFood} />
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              {foodItems.length > 0 && (
+                <div className="flex items-center gap-2 text-sm sm:text-base">
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                    Б: {totalProtein.toFixed(0)} · Ж: {totalFat.toFixed(0)} · У: {totalCarbs.toFixed(0)} · {Math.round(totalCalories)} ккал
+                  </span>
+                </div>
+              )}
+              {foodItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleAnalyzeClick}
+                  disabled={isAnalyzing}
+                  className={`${touchIconBtn} text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50`}
+                  title={isAnalyzing ? 'Анализ...' : 'Анализ приёма'}
+                  aria-label="Анализ приёма"
+                >
+                  {isAnalyzing ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {analysisResult && (
+            <div className="mt-4 p-4 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+              {analysisResult}
+              <button
+                type="button"
+                onClick={() => setAnalysisResult(null)}
+                className="mt-2 text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Скрыть
+              </button>
             </div>
           )}
-          {foodItems.length > 0 && (
-            <button
-              type="button"
-              onClick={handleAnalyzeClick}
-              disabled={isAnalyzing}
-              className={`${touchIconBtn} text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50`}
-              title={isAnalyzing ? 'Анализ...' : 'Анализ приёма'}
-              aria-label="Анализ приёма"
-            >
-              {isAnalyzing ? (
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {analysisResult && (
-        <div className="mt-4 p-4 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-          {analysisResult}
-          <button
-            type="button"
-            onClick={() => setAnalysisResult(null)}
-            className="mt-2 text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            Скрыть
-          </button>
-        </div>
+        </>
       )}
     </div>
   );

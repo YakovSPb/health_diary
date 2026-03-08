@@ -41,3 +41,20 @@ export function getCurrentTime(): string {
 export function caloriesFromBju(protein: number, carbs: number, fat: number): number {
   return protein * 4 + carbs * 4 + fat * 9;
 }
+
+const MINUTES_30_MS = 30 * 60 * 1000;
+
+/**
+ * true, если день совпадает с сегодняшним и с момента приёма (day + time) прошло не более 30 минут.
+ * Используется для начального состояния «развёрнут» у блока приёма пищи.
+ */
+export function isMealWithin30Minutes(day: Date, time: string): boolean {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const selected = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  if (today.getTime() !== selected.getTime()) return false;
+  const [h, m] = time.split(':').map(Number);
+  const mealAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m ?? 0, 0, 0);
+  const diff = now.getTime() - mealAt.getTime();
+  return diff >= 0 && diff <= MINUTES_30_MS;
+}

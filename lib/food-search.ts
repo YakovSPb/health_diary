@@ -95,7 +95,10 @@ export async function searchInMenu(
       [...queryShingles].some((sq) => dishShingles.has(sq)) ||
       [...dishShingles].some((dq) => queryShingles.has(dq));
     const hasMatch = exactMatches > 0 || phoneticMatches > 0 || shingleOverlap;
-    if (!hasMatch) continue;
+    const allDishWordsCovered = dishWords.every((dw) =>
+      queryWords.some((qw) => dw === qw || wordsMatchPhonetic(qw, dw))
+    );
+    if (!hasMatch || !allDishWordsCovered) continue;
     if (score <= 0) continue;
 
     scored.push({

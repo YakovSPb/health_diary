@@ -39,8 +39,19 @@ export async function GET(request: NextRequest) {
         where: { userId: session.user.id },
         orderBy: [{ name: 'asc' }],
       });
-      const searchLower = search.toLowerCase();
-      const filtered = all.filter((i) => i.name.toLowerCase().includes(searchLower));
+      const searchWords = search
+        .toLowerCase()
+        .replace(/ё/g, 'е')
+        .split(/\s+/)
+        .filter(Boolean);
+      const filtered = all.filter((i) => {
+        const nameWords = i.name
+          .toLowerCase()
+          .replace(/ё/g, 'е')
+          .split(/\s+/)
+          .filter(Boolean);
+        return nameWords.length > 0 && nameWords.every((nw) => searchWords.includes(nw));
+      });
       total = filtered.length;
       items = filtered.slice((page - 1) * limit, page * limit);
     } else {
