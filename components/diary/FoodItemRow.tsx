@@ -172,10 +172,10 @@ export default function FoodItemRow({
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
         <div className="flex gap-2 items-start justify-between">
           <div className="flex gap-2 flex-1 min-w-0 items-start">
-            {fromMenu && (
+            {(fromMenu || savedToMenu) && (
               <span
                 className="shrink-0 w-2.5 h-2.5 rounded-full bg-green-500 dark:bg-green-400 mt-[0.6rem]"
-                title="Из меню"
+                title={fromMenu ? 'Из меню' : 'Сохранено в меню'}
                 aria-hidden
               />
             )}
@@ -275,10 +275,10 @@ export default function FoodItemRow({
     <tr className="border-t border-gray-200 dark:border-gray-700">
       <td className="py-3 px-2 sm:px-4 align-top">
         <div className="flex gap-2 items-center min-w-0">
-          {fromMenu && (
+          {(fromMenu || savedToMenu) && (
             <span
               className="shrink-0 w-2.5 h-2.5 rounded-full bg-green-500 dark:bg-green-400"
-              title="Из меню"
+              title={fromMenu ? 'Из меню' : 'Сохранено в меню'}
               aria-hidden
             />
           )}
