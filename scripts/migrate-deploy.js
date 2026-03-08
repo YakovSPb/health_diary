@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Запуск prisma migrate deploy с повторами (для Vercel + Neon: холодный старт БД может давать P1002).
+ * Запуск prisma migrate deploy с повторами (для Vercel + Neon: холодный старт БД и P1002 advisory lock).
+ * Перед запуском лучше остановить dev-сервер (npm run dev), чтобы не держать соединения с БД.
  * Использование: node scripts/migrate-deploy.js
  */
 
 const { execSync } = require('child_process');
 
-const maxAttempts = 3;
-const delayMs = 8000;
+const maxAttempts = 5;
+const delayMs = 12000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -16,6 +17,9 @@ function sleep(ms) {
 async function main() {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
+      if (attempt > 1) {
+        console.warn(`[migrate-deploy] Попытка ${attempt}/${maxAttempts}...`);
+      }
       execSync('npx prisma migrate deploy', {
         stdio: 'inherit',
         env: { ...process.env },

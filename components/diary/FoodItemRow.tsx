@@ -26,7 +26,7 @@ interface FoodItemRowProps {
   /** true, если продукт добавлен из меню (зелёный кружок слева от названия) */
   fromMenu?: boolean;
   savedToMenu?: boolean;
-  onSaveToMenu?: (name: string, carbs: number, protein: number, fat: number) => void;
+  onSaveToMenu?: (name: string, carbs: number, protein: number, fat: number, caloriesPer100g?: number) => void;
   /** Если true, название отображается красным (продукт содержит сахар по данным DeepSeek). */
   hasSugar?: boolean;
 }
@@ -62,11 +62,18 @@ export default function FoodItemRow({
   const [fatPer100g, setFatPer100g] = useState(initialFat.toString());
   const [weightGrams, setWeightGrams] = useState(initialWeight.toString());
   const [isEditing, setIsEditing] = useState(false);
+  const initialCaloriesPer100 =
+    !Number.isNaN(initialCarbs) &&
+    !Number.isNaN(initialProtein) &&
+    !Number.isNaN(initialFat)
+      ? Math.round(caloriesFromBju(initialProtein, initialCarbs, initialFat))
+      : 0;
   const [baselineMenu, setBaselineMenu] = useState(() => ({
     name: initialName,
     carbs: initialCarbs,
     protein: initialProtein,
     fat: initialFat,
+    caloriesPer100: initialCaloriesPer100,
   }));
 
   const carbsNum = parseFloat(carbsPer100g);
@@ -82,15 +89,26 @@ export default function FoodItemRow({
     !Number.isNaN(caloriesPer100Num) && !Number.isNaN(weightNumForCalories)
       ? (caloriesPer100Num * weightNumForCalories) / 100
       : totalCalories;
+  const caloriesChanged =
+    !Number.isNaN(caloriesPer100Num) &&
+    Math.round(caloriesPer100Num) !== baselineMenu.caloriesPer100;
   const hasChangesForMenu =
     onSaveToMenu &&
     (name.trim() !== baselineMenu.name ||
-      (hasValidBju && (carbsNum !== baselineMenu.carbs || proteinNum !== baselineMenu.protein || fatNum !== baselineMenu.fat)));
+      (hasValidBju && (carbsNum !== baselineMenu.carbs || proteinNum !== baselineMenu.protein || fatNum !== baselineMenu.fat)) ||
+      caloriesChanged);
 
   const handleSaveToMenu = () => {
     if (!onSaveToMenu || !hasValidBju) return;
-    onSaveToMenu(name.trim(), carbsNum, proteinNum, fatNum);
-    setBaselineMenu({ name: name.trim(), carbs: carbsNum, protein: proteinNum, fat: fatNum });
+    const cal = !Number.isNaN(caloriesPer100Num) ? Math.round(caloriesPer100Num) : undefined;
+    onSaveToMenu(name.trim(), carbsNum, proteinNum, fatNum, cal);
+    setBaselineMenu({
+      name: name.trim(),
+      carbs: carbsNum,
+      protein: proteinNum,
+      fat: fatNum,
+      caloriesPer100: cal ?? Math.round(caloriesFromBju(proteinNum, carbsNum, fatNum)),
+    });
     const weightNum = parseFloat(weightGrams);
     const updates: Parameters<typeof onUpdate>[1] = {
       name: name.trim(),

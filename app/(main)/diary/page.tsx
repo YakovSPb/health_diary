@@ -363,26 +363,35 @@ export default function DiaryPage() {
     name: string,
     carbs: number,
     protein: number,
-    fat: number
+    fat: number,
+    caloriesPer100g?: number
   ) => {
     try {
+      const body: Record<string, unknown> = {
+        name,
+        carbsPer100g: carbs,
+        proteinPer100g: protein,
+        fatPer100g: fat,
+      };
+      if (caloriesPer100g !== undefined) body.caloriesPer100g = caloriesPer100g;
       const response = await fetch('/api/menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          carbsPer100g: carbs,
-          proteinPer100g: protein,
-          fatPer100g: fat,
-        }),
+        body: JSON.stringify(body),
       });
       if (response.ok) {
-        setSavedToMenuFoodIds((prev) => new Set(prev).add(foodId));
-        await fetch(`/api/meals/${mealId}/foods/${foodId}`, {
+        const patchRes = await fetch(`/api/meals/${mealId}/foods/${foodId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ savedToMenu: true }),
         });
+        if (!patchRes.ok) {
+          const errText = await patchRes.text();
+          console.error('PATCH savedToMenu failed:', patchRes.status, errText);
+          alert('Продукт добавлен в меню, но не удалось сохранить отметку. Перезагрузите страницу и попробуйте снова.');
+          return;
+        }
+        setSavedToMenuFoodIds((prev) => new Set(prev).add(foodId));
         setMeals((prev) =>
           prev.map((m) =>
             m.id === mealId

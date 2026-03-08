@@ -40,6 +40,20 @@ export function lemmatizeWord(word: string): string {
   if (word.length < 3) return word;
 
   const w = word;
+
+  // Ед. ч. «яйцо» → «яйца» (часто в меню во мн. ч.; голос даёт «яйцо вареное»)
+  if (w === 'яйцо') return 'яйца';
+
+  // Прилагательные: варёный/вареное/варёные → основа (голос часто «вареное»)
+  if (w.length >= 5) {
+    if (w.endsWith('енное')) return w.slice(0, -5) + 'ен';
+    if (w.endsWith('еное')) return w.slice(0, -4) + 'ен';
+    if (w.endsWith('енные')) return w.slice(0, -5) + 'ен';
+    if (w.endsWith('еные')) return w.slice(0, -4) + 'ен';
+    if (w.endsWith('енный')) return w.slice(0, -5) + 'ен';
+    if (w.endsWith('еный')) return w.slice(0, -4) + 'ен';
+  }
+
   // Ж.р. -а: сметана → сметаной, сметаны, сметану
   if (w.endsWith('ой') && w.length >= 4) return w.slice(0, -2) + 'а';
   if (w.endsWith('ей') && w.length >= 4) return w.slice(0, -2) + 'я';

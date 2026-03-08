@@ -45,7 +45,7 @@ interface MealBlockProps {
   savedToMenuFoodIds?: Set<string>;
   /** ID продуктов, добавленных из меню в этой сессии (для зелёной точки «из меню») */
   foodIdsFromMenu?: Set<string>;
-  onSaveToMenu?: (mealId: string, foodId: string, name: string, carbs: number, protein: number, fat: number) => void;
+  onSaveToMenu?: (mealId: string, foodId: string, name: string, carbs: number, protein: number, fat: number, caloriesPer100g?: number) => void;
 }
 
 export default function MealBlock({
@@ -173,7 +173,8 @@ export default function MealBlock({
                     savedToMenu={savedToMenuFoodIds?.has(item.id)}
                     onSaveToMenu={
                       onSaveToMenu
-                        ? (name, carbs, protein, fat) => onSaveToMenu(id, item.id, name, carbs, protein, fat)
+                        ? (name, carbs, protein, fat, caloriesPer100g) =>
+                            onSaveToMenu(id, item.id, name, carbs, protein, fat, caloriesPer100g)
                         : undefined
                     }
                     hasSugar={(item.sugarsPer100g ?? 0) > 0}
@@ -203,7 +204,8 @@ export default function MealBlock({
                 savedToMenu={savedToMenuFoodIds?.has(item.id)}
                 onSaveToMenu={
                   onSaveToMenu
-                    ? (name, carbs, protein, fat) => onSaveToMenu(id, item.id, name, carbs, protein, fat)
+                    ? (name, carbs, protein, fat, caloriesPer100g) =>
+                        onSaveToMenu(id, item.id, name, carbs, protein, fat, caloriesPer100g)
                     : undefined
                 }
                 hasSugar={(item.sugarsPer100g ?? 0) > 0}
