@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import BarcodeScannerModal from './BarcodeScannerModal';
 import FoodItemRow from './FoodItemRow';
 import VoiceInput from './VoiceInput';
 
@@ -78,6 +79,7 @@ export default function MealBlock({
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAddingFood, setIsAddingFood] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [showBarcodeInput, setShowBarcodeInput] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState('');
 
@@ -102,6 +104,22 @@ export default function MealBlock({
   };
 
   const handleBarcodeClick = () => {
+    setShowBarcodeScanner(true);
+  };
+
+  const handleBarcodeDetected = async (barcode: string) => {
+    const code = barcode.replace(/\D/g, '').trim();
+    if (!code || !onAddFoodByBarcode) return;
+    setIsAddingFood(true);
+    try {
+      await onAddFoodByBarcode(id, code);
+    } finally {
+      setIsAddingFood(false);
+    }
+  };
+
+  const openManualBarcodeInput = () => {
+    setShowBarcodeScanner(false);
     setShowBarcodeInput(true);
     setBarcodeInput('');
   };
@@ -140,6 +158,14 @@ export default function MealBlock({
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 sm:p-6 mb-4">
+      {onAddFoodByBarcode && (
+        <BarcodeScannerModal
+          open={showBarcodeScanner}
+          onClose={() => setShowBarcodeScanner(false)}
+          onDetected={handleBarcodeDetected}
+          onManualEntry={openManualBarcodeInput}
+        />
+      )}
       <div className="flex gap-3 mb-4">
         <button
           type="button"
