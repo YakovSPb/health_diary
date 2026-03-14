@@ -10,7 +10,7 @@ export interface BarcodeScannerModalProps {
   onManualEntry?: () => void;
 }
 
-/** Модальное окно со сканером штрихкода через камеру (html5-qrcode). */
+/** Модальное окно со сканером штрихкода и QR-кода через камеру (html5-qrcode). */
 export default function BarcodeScannerModal({
   open,
   onClose,
@@ -52,23 +52,30 @@ export default function BarcodeScannerModal({
 
         const html5QrCode = new Html5Qrcode(scopeId, {
           formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.DATA_MATRIX,
             Html5QrcodeSupportedFormats.EAN_13,
             Html5QrcodeSupportedFormats.EAN_8,
             Html5QrcodeSupportedFormats.UPC_A,
             Html5QrcodeSupportedFormats.UPC_E,
             Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.QR_CODE,
           ],
           verbose: false,
         });
 
         scannerRef.current = html5QrCode;
 
+        const qrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const size = Math.floor(minEdge * 0.75);
+          return { width: size, height: size };
+        };
+
         const config = {
           fps: 10,
-          qrbox: { width: 280, height: 120 },
-          aspectRatio: 1.333,
+          qrbox: qrboxFunction,
+          aspectRatio: 1.777778,
         };
 
         await html5QrCode.start(
@@ -123,12 +130,12 @@ export default function BarcodeScannerModal({
           id="barcode-scanner-title"
           className="text-center text-lg font-semibold text-white"
         >
-          Наведите камеру на штрихкод
+          Наведите камеру на штрихкод или QR-код
         </h2>
 
         <div
           id={scopeId}
-          className="overflow-hidden rounded-lg bg-black min-h-[200px] w-full"
+          className="overflow-hidden rounded-lg bg-black min-h-[280px] w-full aspect-video"
         />
 
         {isStarting && (

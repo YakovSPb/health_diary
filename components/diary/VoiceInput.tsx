@@ -245,7 +245,7 @@ export default function VoiceInput({ onResult, disabled, onBarcodeClick }: Voice
             onClick={onBarcodeClick}
             disabled={disabled}
             className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-lg transition-colors bg-violet-600 hover:bg-violet-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed touch-manipulation active:scale-95 w-full"
-            title="Добавить по штрихкоду"
+            title="Добавить по штрихкоду или QR-коду"
           >
             <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path d="M2 6h1v12H2V6zm2 0h1v12H4V6zm3 0h.5v12H7V6zm2 0h1v12H9V6zm2 0h.5v12h-.5V6zm2 0h1v12h-1V6zm2 0h.5v12H14V6zm2 0h1v12h-1V6zm2 0h1v12h-1V6z" />

@@ -316,7 +316,7 @@ export default function MealBlock({
                     if (e.key === 'Enter') handleBarcodeSubmit();
                     if (e.key === 'Escape') setShowBarcodeInput(false);
                   }}
-                  placeholder="Введите штрихкод"
+                  placeholder="Введите штрихкод или код из QR"
                   className="flex-1 min-w-[120px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
                   autoFocus
                 />
