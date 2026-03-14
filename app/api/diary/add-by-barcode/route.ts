@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const barcodeResult = await findProductByBarcode(barcode);
     if (!barcodeResult?.product?.name) {
       return NextResponse.json(
-        { error: 'Товар по штрихкоду не найден (Честный ЗНАК).' },
+        { error: 'Товар по штрихкоду не найден.' },
         { status: 404 }
       );
     }
