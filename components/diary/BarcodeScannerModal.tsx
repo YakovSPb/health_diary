@@ -61,6 +61,7 @@ export default function BarcodeScannerModal({
             Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.CODE_39,
           ],
+          useBarCodeDetectorIfSupported: false,
           verbose: false,
         });
 
