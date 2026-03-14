@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { findProductByBarcode } from '@/lib/barcode-apis';
-import { searchInMenu } from '@/lib/food-search';
-import { findFood } from '@/lib/food-search';
 import { getCurrentTime } from '@/lib/date-utils';
+import { findFood, searchInMenu } from '@/lib/food-search';
+import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 function caloriesFromBju(protein: number, carbs: number, fat: number): number {
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     const barcodeResult = await findProductByBarcode(barcode);
     if (!barcodeResult?.product?.name) {
       return NextResponse.json(
-        { error: 'Товар по штрихкоду не найден (Честный ЗНАК, Меркурий, Роскачество, ЮНИСКАН, Open Food Facts).' },
+        { error: 'Товар по штрихкоду не найден (Честный ЗНАК).' },
         { status: 404 }
       );
     }

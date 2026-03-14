@@ -33,7 +33,7 @@ interface MealBlockProps {
   mealName: string;
   onTimeChange: (id: string, time: string) => void;
   onAddFood: (mealId: string, text: string) => void;
-  /** Добавить продукт по штрихкоду (поиск в ЗНАК, Меркурий, Open Food Facts; затем меню → КБЖУ) */
+  /** Добавить продукт по штрихкоду (Честный ЗНАК; затем меню → КБЖУ) */
   onAddFoodByBarcode?: (mealId: string, barcode: string) => void;
   onUpdateFood: (mealId: string, foodId: string, data: {
     name?: string;
