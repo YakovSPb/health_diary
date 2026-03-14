@@ -32,6 +32,8 @@ interface MealBlockProps {
   mealName: string;
   onTimeChange: (id: string, time: string) => void;
   onAddFood: (mealId: string, text: string) => void;
+  /** Добавить продукт по штрихкоду (поиск в ЗНАК, Меркурий, Open Food Facts; затем меню → КБЖУ) */
+  onAddFoodByBarcode?: (mealId: string, barcode: string) => void;
   onUpdateFood: (mealId: string, foodId: string, data: {
     name?: string;
     carbsPer100g?: number;
@@ -61,6 +63,7 @@ export default function MealBlock({
   mealName,
   onTimeChange,
   onAddFood,
+  onAddFoodByBarcode,
   onUpdateFood,
   onDeleteFood,
   onDelete,
@@ -75,6 +78,8 @@ export default function MealBlock({
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAddingFood, setIsAddingFood] = useState(false);
+  const [showBarcodeInput, setShowBarcodeInput] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
 
   useEffect(() => {
     setIsExpanded(defaultExpanded);
@@ -91,6 +96,24 @@ export default function MealBlock({
     setIsAddingFood(true);
     try {
       await onAddFood(id, trimmed);
+    } finally {
+      setIsAddingFood(false);
+    }
+  };
+
+  const handleBarcodeClick = () => {
+    setShowBarcodeInput(true);
+    setBarcodeInput('');
+  };
+
+  const handleBarcodeSubmit = async () => {
+    const code = barcodeInput.replace(/\D/g, '').trim();
+    if (!code || !onAddFoodByBarcode) return;
+    setIsAddingFood(true);
+    try {
+      await onAddFoodByBarcode(id, code);
+      setShowBarcodeInput(false);
+      setBarcodeInput('');
     } finally {
       setIsAddingFood(false);
     }
@@ -255,8 +278,46 @@ export default function MealBlock({
 
       {isExpanded && (
         <>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-center border-t border-gray-200 dark:border-gray-700 pt-4">
-            <VoiceInput onResult={handleAddFoodFromVoice} disabled={isAddingFood} />
+          <div className="flex flex-col gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+            {showBarcodeInput && onAddFoodByBarcode && (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleBarcodeSubmit();
+                    if (e.key === 'Escape') setShowBarcodeInput(false);
+                  }}
+                  placeholder="Введите штрихкод"
+                  className="flex-1 min-w-[120px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleBarcodeSubmit}
+                  disabled={isAddingFood || !barcodeInput.replace(/\D/g, '').trim()}
+                  className="min-h-[44px] px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                >
+                  Добавить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowBarcodeInput(false); setBarcodeInput(''); }}
+                  className="min-h-[44px] px-4 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-lg transition-colors"
+                >
+                  Отмена
+                </button>
+              </div>
+            )}
+            <div className="w-full">
+              <VoiceInput
+                onResult={handleAddFoodFromVoice}
+                disabled={isAddingFood}
+                onBarcodeClick={onAddFoodByBarcode ? handleBarcodeClick : undefined}
+              />
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               {foodItems.length > 0 && (
                 <div className="flex items-center gap-2 text-sm sm:text-base">

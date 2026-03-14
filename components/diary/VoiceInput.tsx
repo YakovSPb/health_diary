@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 interface VoiceInputProps {
   onResult: (text: string) => void;
   disabled?: boolean;
+  /** При передаче рендерится третья кнопка «Штрихкод» и кнопки растягиваются на всю ширину */
+  onBarcodeClick?: () => void;
 }
 
 // Проверяем поддержку Web Speech API
@@ -13,7 +15,7 @@ const isSpeechRecognitionSupported = () => {
   return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
 };
 
-export default function VoiceInput({ onResult, disabled }: VoiceInputProps) {
+export default function VoiceInput({ onResult, disabled, onBarcodeClick }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
@@ -161,7 +163,7 @@ export default function VoiceInput({ onResult, disabled }: VoiceInputProps) {
       {error && (
         <div className="flex items-start space-x-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <svg
-            className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
+            className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -193,42 +195,22 @@ export default function VoiceInput({ onResult, disabled }: VoiceInputProps) {
         </div>
       )}
 
-      {/* Кнопки ввода */}
-      <div className="flex items-center space-x-2">
-        {isSupported && (
-          <button
-            onClick={isListening ? stopListening : startListening}
-            disabled={disabled}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-              isListening
-                ? 'bg-red-600 hover:bg-red-700 animate-pulse'
-                : 'bg-blue-600 hover:bg-blue-700'
-            } text-white disabled:bg-gray-400 disabled:cursor-not-allowed`}
-            title="Голосовой ввод (требуется интернет)"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-              />
-            </svg>
-          </button>
-        )}
-        
+      {/* Кнопки ввода: при onBarcodeClick — три кнопки на всю ширину */}
+      <div
+        className={
+          onBarcodeClick
+            ? 'w-full grid grid-cols-3 gap-2'
+            : 'flex items-center space-x-2'
+        }
+      >
         <button
           onClick={() => setShowTextInput(true)}
           disabled={disabled}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed touch-manipulation active:scale-95 w-full"
+          title="Добавить вручную"
         >
           <svg
-            className="w-5 h-5"
+            className="w-5 h-5 shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -241,6 +223,35 @@ export default function VoiceInput({ onResult, disabled }: VoiceInputProps) {
             />
           </svg>
         </button>
+        {(onBarcodeClick || isSupported) && (
+          <button
+            onClick={isListening ? stopListening : startListening}
+            disabled={disabled || !isSupported}
+            className={`flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-lg transition-colors w-full touch-manipulation active:scale-95 ${
+              isListening
+                ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                : 'bg-blue-600 hover:bg-blue-700'
+            } text-white disabled:bg-gray-400 disabled:cursor-not-allowed`}
+            title="Голосовой ввод (требуется интернет)"
+          >
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </button>
+        )}
+        {onBarcodeClick && (
+          <button
+            type="button"
+            onClick={onBarcodeClick}
+            disabled={disabled}
+            className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-lg transition-colors bg-violet-600 hover:bg-violet-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed touch-manipulation active:scale-95 w-full"
+            title="Добавить по штрихкоду"
+          >
+            <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path d="M2 6h1v12H2V6zm2 0h1v12H4V6zm3 0h.5v12H7V6zm2 0h1v12H9V6zm2 0h.5v12h-.5V6zm2 0h1v12h-1V6zm2 0h.5v12H14V6zm2 0h1v12h-1V6zm2 0h1v12h-1V6z" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

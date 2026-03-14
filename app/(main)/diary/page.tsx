@@ -310,6 +310,41 @@ export default function DiaryPage() {
     }
   };
 
+  const handleAddFoodByBarcode = async (mealId: string, barcode: string) => {
+    try {
+      const res = await fetch('/api/diary/add-by-barcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode, mealId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.error ?? 'Не удалось добавить по штрихкоду');
+        return;
+      }
+      const newItem = data.foodItem as FoodItem;
+      if (newItem.menuItemId) {
+        setFoodIdsFromMenu((prev) => new Set(prev).add(newItem.id));
+      }
+      setMeals((prev) =>
+        prev.map((m) => {
+          if (m.id !== mealId) return m;
+          return {
+            ...m,
+            foodItems: [...m.foodItems, { ...newItem, menuItemId: newItem.menuItemId ?? null }],
+            totalCarbs: m.totalCarbs + newItem.totalCarbs,
+            totalProtein: m.totalProtein + newItem.totalProtein,
+            totalFat: m.totalFat + newItem.totalFat,
+            totalCalories: m.totalCalories + newItem.totalCalories,
+          };
+        })
+      );
+    } catch (error) {
+      console.error('Error adding food by barcode:', error);
+      alert('Произошла ошибка при добавлении по штрихкоду');
+    }
+  };
+
   const handleUpdateFood = async (
     mealId: string,
     foodId: string,
@@ -494,6 +529,7 @@ export default function DiaryPage() {
                     mealName={getMealNameWithOrder(meal.time, meals)}
                     onTimeChange={handleTimeChange}
                     onAddFood={handleAddFood}
+                    onAddFoodByBarcode={handleAddFoodByBarcode}
                     onUpdateFood={handleUpdateFood}
                     onDeleteFood={handleDeleteFood}
                     onDelete={handleDeleteMeal}
