@@ -130,7 +130,7 @@ const fetchFromOpenFoodFacts = async (
     return {
       source: 'openfoodfacts',
       rawProduct: product,
-      rawNutriments: product.nutriments ?? null,
+      rawNutriments: (product.nutriments as CanonicalNutriments | undefined) ?? null,
       name: rawName,
       nutriments,
     };
