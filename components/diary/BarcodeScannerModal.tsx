@@ -20,14 +20,15 @@ export default function BarcodeScannerModal({
   const scopeId = useId().replace(/:/g, '-');
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-  const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => Promise<void> } | null>(null);
+  const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void | Promise<void> } | null>(null);
 
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current;
     if (!scanner) return;
     try {
       await scanner.stop();
-      await scanner.clear();
+      const clearResult = scanner.clear();
+      if (clearResult instanceof Promise) await clearResult;
     } catch {
       // ignore
     }
