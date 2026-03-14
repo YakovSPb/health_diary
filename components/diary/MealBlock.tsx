@@ -1,9 +1,219 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import BarcodeScannerModal from './BarcodeScannerModal';
 import FoodItemRow from './FoodItemRow';
 import VoiceInput from './VoiceInput';
+
+interface FoodPhotoModalProps {
+  onClose: () => void;
+  onSubmit: (file: File) => void | Promise<void>;
+  isSubmitting: boolean;
+}
+
+function FoodPhotoModal({
+  onClose,
+  onSubmit,
+  isSubmitting,
+}: FoodPhotoModalProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [isCameraSupported] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      !!navigator.mediaDevices?.getUserMedia
+  );
+  const [isCameraLoading, setIsCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (isCameraSupported && typeof window !== 'undefined') {
+      const startCamera = async () => {
+        try {
+          setIsCameraLoading(true);
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+          });
+          if (cancelled) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play().catch(() => undefined);
+          }
+          setIsCameraLoading(false);
+          setCameraError(null);
+        } catch (e) {
+          console.error('Food photo camera error:', e);
+          setIsCameraLoading(false);
+          setCameraError(
+            'Не удалось получить доступ к камере. Разрешите доступ в браузере или выберите фото из галереи.'
+          );
+        }
+      };
+
+      startCamera();
+    }
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [isCameraSupported]);
+
+  const handleTakePhoto = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    if (width === 0 || height === 0) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.9)
+    );
+    if (!blob) return;
+
+    const file = new File([blob], `meal-${Date.now()}.jpg`, {
+      type: 'image/jpeg',
+    });
+
+    setSelectedFile(file);
+  };
+
+  const handleFileChange = (file: File | null) => {
+    setSelectedFile(file);
+  };
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedFile || isSubmitting) return;
+    await onSubmit(selectedFile);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={handleClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="food-photo-modal-title"
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3
+          id="food-photo-modal-title"
+          className="text-lg font-semibold text-gray-900 dark:text-white mb-3"
+        >
+          Фото еды
+        </h3>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+          Сделайте фото тарелки или выберите снимок из галереи. Приложение
+          попробует распознать продукт, вес и БЖУ и добавить запись в дневник.
+        </p>
+        <div className="mb-4 space-y-3">
+          {isCameraSupported && (
+            <div className="space-y-2">
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600 bg-black">
+                <video
+                  ref={videoRef}
+                  className="h-full w-full object-cover"
+                  playsInline
+                  muted
+                />
+                {isCameraLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <span className="text-sm text-white">
+                      Загрузка камеры…
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleTakePhoto}
+                disabled={isCameraLoading || isSubmitting}
+                className="w-full min-h-[44px] px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Сделать снимок с камеры
+              </button>
+            </div>
+          )}
+          {!isCameraSupported && (
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Камера недоступна. Выберите фото из галереи.
+            </p>
+          )}
+          {cameraError && (
+            <p className="text-xs text-red-600 dark:text-red-400">
+              {cameraError}
+            </p>
+          )}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+              Или выберите фото из галереи
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                handleFileChange(file);
+              }}
+              className="block w-full text-sm text-gray-900 dark:text-gray-100 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
+            />
+            {selectedFile && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 break-all">
+                Выбрано: {selectedFile.name}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="min-h-[44px] px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!selectedFile || isSubmitting}
+            className="min-h-[44px] px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Распознаём…' : 'Распознать и добавить'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface FoodItem {
   id: string;
@@ -35,6 +245,8 @@ interface MealBlockProps {
   onAddFood: (mealId: string, text: string) => void;
   /** Добавить продукт по штрихкоду (Честный ЗНАК; затем меню → КБЖУ) */
   onAddFoodByBarcode?: (mealId: string, barcode: string) => void;
+  /** Добавить продукт по фото (распознавание еды по изображению) */
+  onAddFoodByPhoto?: (mealId: string, file: File) => void | Promise<void>;
   onUpdateFood: (mealId: string, foodId: string, data: {
     name?: string;
     carbsPer100g?: number;
@@ -65,6 +277,7 @@ export default function MealBlock({
   onTimeChange,
   onAddFood,
   onAddFoodByBarcode,
+  onAddFoodByPhoto,
   onUpdateFood,
   onDeleteFood,
   onDelete,
@@ -80,8 +293,8 @@ export default function MealBlock({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAddingFood, setIsAddingFood] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
-  const [showBarcodeInput, setShowBarcodeInput] = useState(false);
-  const [barcodeInput, setBarcodeInput] = useState('');
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [isAddingFromPhoto, setIsAddingFromPhoto] = useState(false);
 
   useEffect(() => {
     setIsExpanded(defaultExpanded);
@@ -109,31 +322,29 @@ export default function MealBlock({
 
   const handleBarcodeDetected = async (barcode: string) => {
     const code = barcode.replace(/\D/g, '').trim();
-    if (!code || !onAddFoodByBarcode) return;
+    if (!code || !onAddFoodByBarcode || isAddingFood) return;
     setIsAddingFood(true);
     try {
       await onAddFoodByBarcode(id, code);
+      setShowBarcodeScanner(false);
     } finally {
       setIsAddingFood(false);
     }
   };
 
-  const openManualBarcodeInput = () => {
-    setShowBarcodeScanner(false);
-    setShowBarcodeInput(true);
-    setBarcodeInput('');
+  const handlePhotoClick = () => {
+    if (isAddingFromPhoto || !onAddFoodByPhoto) return;
+    setIsPhotoModalOpen(true);
   };
 
-  const handleBarcodeSubmit = async () => {
-    const code = barcodeInput.replace(/\D/g, '').trim();
-    if (!code || !onAddFoodByBarcode) return;
-    setIsAddingFood(true);
+  const handlePhotoSubmit = async (file: File) => {
+    if (!onAddFoodByPhoto || isAddingFromPhoto) return;
+    setIsAddingFromPhoto(true);
     try {
-      await onAddFoodByBarcode(id, code);
-      setShowBarcodeInput(false);
-      setBarcodeInput('');
+      await onAddFoodByPhoto(id, file);
+      setIsPhotoModalOpen(false);
     } finally {
-      setIsAddingFood(false);
+      setIsAddingFromPhoto(false);
     }
   };
 
@@ -161,9 +372,22 @@ export default function MealBlock({
       {onAddFoodByBarcode && (
         <BarcodeScannerModal
           open={showBarcodeScanner}
-          onClose={() => setShowBarcodeScanner(false)}
+          onClose={() => {
+            if (isAddingFood) return;
+            setShowBarcodeScanner(false);
+          }}
           onDetected={handleBarcodeDetected}
-          onManualEntry={openManualBarcodeInput}
+          isSubmitting={isAddingFood}
+        />
+      )}
+      {isPhotoModalOpen && onAddFoodByPhoto && (
+        <FoodPhotoModal
+          onClose={() => {
+            if (isAddingFromPhoto) return;
+            setIsPhotoModalOpen(false);
+          }}
+          isSubmitting={isAddingFromPhoto}
+          onSubmit={handlePhotoSubmit}
         />
       )}
       <div className="flex gap-3 mb-4">
@@ -305,43 +529,12 @@ export default function MealBlock({
       {isExpanded && (
         <>
           <div className="flex flex-col gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
-            {showBarcodeInput && onAddFoodByBarcode && (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleBarcodeSubmit();
-                    if (e.key === 'Escape') setShowBarcodeInput(false);
-                  }}
-                  placeholder="Введите штрихкод или код из QR"
-                  className="flex-1 min-w-[120px] px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={handleBarcodeSubmit}
-                  disabled={isAddingFood || !barcodeInput.replace(/\D/g, '').trim()}
-                  className="min-h-[44px] px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
-                >
-                  Добавить
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowBarcodeInput(false); setBarcodeInput(''); }}
-                  className="min-h-[44px] px-4 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-lg transition-colors"
-                >
-                  Отмена
-                </button>
-              </div>
-            )}
             <div className="w-full">
               <VoiceInput
                 onResult={handleAddFoodFromVoice}
                 disabled={isAddingFood}
                 onBarcodeClick={onAddFoodByBarcode ? handleBarcodeClick : undefined}
+                onPhotoClick={onAddFoodByPhoto ? handlePhotoClick : undefined}
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">

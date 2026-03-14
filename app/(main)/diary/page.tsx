@@ -57,6 +57,8 @@ function extractProductName(text: string): string {
 interface ProfileCalories {
   dailyCaloriesNeeded: number | null;
   calorieDeficit: number | null;
+  /** Явно заданная цель ккал/день из профиля; при наличии используется вместо расчёта норма − дефицит */
+  dailyCalorieGoal: number | null;
 }
 
 export default function DiaryPage() {
@@ -78,6 +80,7 @@ export default function DiaryPage() {
         setProfileCalories({
           dailyCaloriesNeeded: data.dailyCaloriesNeeded ?? null,
           calorieDeficit: data.calorieDeficit ?? null,
+          dailyCalorieGoal: data.dailyCalorieGoal ?? null,
         });
       }
     } catch {
@@ -91,13 +94,15 @@ export default function DiaryPage() {
   }, [session, fetchProfile]);
 
   const targetCaloriesPerDay =
-    profileCalories?.dailyCaloriesNeeded != null &&
-    profileCalories?.calorieDeficit != null
-      ? getTargetCaloriesPerDay(
-          profileCalories.dailyCaloriesNeeded,
-          profileCalories.calorieDeficit
-        )
-      : null;
+    profileCalories?.dailyCalorieGoal != null && profileCalories.dailyCalorieGoal > 0
+      ? profileCalories.dailyCalorieGoal
+      : profileCalories?.dailyCaloriesNeeded != null &&
+          profileCalories?.calorieDeficit != null
+        ? getTargetCaloriesPerDay(
+            profileCalories.dailyCaloriesNeeded,
+            profileCalories.calorieDeficit
+          )
+        : null;
 
   const fetchMeals = useCallback(async () => {
     if (!session) return;
@@ -310,18 +315,137 @@ export default function DiaryPage() {
     }
   };
 
-  const handleAddFoodByBarcode = async (mealId: string, barcode: string) => {
+  const handleAddFoodByPhoto = async (mealId: string, file: File) => {
     try {
-      const res = await fetch('/api/diary/add-by-barcode', {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const parseResponse = await fetch('/api/parse-food-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcode, mealId }),
+        body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data?.error ?? 'Не удалось добавить по штрихкоду');
+
+      if (!parseResponse.ok) {
+        const errorData = await parseResponse.json().catch(() => ({}));
+        const message =
+          (errorData?.error as string) ??
+          (parseResponse.status === 415
+            ? 'Неверный формат изображения'
+            : 'Не удалось распознать еду по фото');
+        alert(message);
         return;
       }
+
+      const parseData = await parseResponse.json();
+      const food = parseData.food as {
+        name: string;
+        carbsPer100g: number;
+        weightGrams: number;
+        proteinPer100g?: number;
+        fatPer100g?: number;
+        sugarsPer100g?: number;
+        menuItemId?: string;
+      };
+
+      const body: Record<string, unknown> = {
+        name: food.name,
+        carbsPer100g: food.carbsPer100g,
+        proteinPer100g: food.proteinPer100g ?? 0,
+        fatPer100g: food.fatPer100g ?? 0,
+        weightGrams: food.weightGrams,
+      };
+      if (food.menuItemId) body.menuItemId = food.menuItemId;
+      if (food.sugarsPer100g !== undefined)
+        body.sugarsPer100g = food.sugarsPer100g;
+
+      const response = await fetch(`/api/meals/${mealId}/foods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        alert('Не удалось добавить продукт по фото');
+        return;
+      }
+
+      const data = await response.json();
+      const newItem = data.foodItem as FoodItem;
+      if (newItem.menuItemId) {
+        setFoodIdsFromMenu((prev) => new Set(prev).add(newItem.id));
+      }
+      setMeals((prev) =>
+        prev.map((m) => {
+          if (m.id !== mealId) return m;
+          return {
+            ...m,
+            foodItems: [...m.foodItems, { ...newItem, menuItemId: newItem.menuItemId ?? null }],
+            totalCarbs: m.totalCarbs + newItem.totalCarbs,
+            totalProtein: m.totalProtein + newItem.totalProtein,
+            totalFat: m.totalFat + newItem.totalFat,
+            totalCalories: m.totalCalories + newItem.totalCalories,
+          };
+        })
+      );
+    } catch (error) {
+      console.error('Error adding food by photo:', error);
+      alert('Произошла ошибка при добавлении по фото');
+    }
+  };
+
+  const handleAddFoodByBarcode = async (mealId: string, barcode: string) => {
+    try {
+      const trimmed = barcode.trim();
+      if (!trimmed) return;
+
+      const parseResponse = await fetch('/api/parse-food-barcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode: trimmed }),
+      });
+
+      if (!parseResponse.ok) {
+        const errorData = await parseResponse.json().catch(() => ({}));
+        const message =
+          (errorData?.error as string) ||
+          (parseResponse.status === 404
+            ? 'Продукт по этому штрихкоду не найден'
+            : 'Не удалось получить данные по штрихкоду');
+        alert(message);
+        return;
+      }
+
+      const parseData = await parseResponse.json();
+      const food = parseData.food as {
+        name: string;
+        carbsPer100g: number;
+        weightGrams: number;
+        proteinPer100g?: number;
+        fatPer100g?: number;
+        menuItemId?: string;
+      };
+
+      const body: Record<string, unknown> = {
+        name: food.name,
+        carbsPer100g: food.carbsPer100g,
+        proteinPer100g: food.proteinPer100g ?? 0,
+        fatPer100g: food.fatPer100g ?? 0,
+        weightGrams: food.weightGrams,
+      };
+      if (food.menuItemId) body.menuItemId = food.menuItemId;
+
+      const response = await fetch(`/api/meals/${mealId}/foods`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        alert('Не удалось добавить продукт по штрихкоду');
+        return;
+      }
+
+      const data = await response.json();
       const newItem = data.foodItem as FoodItem;
       if (newItem.menuItemId) {
         setFoodIdsFromMenu((prev) => new Set(prev).add(newItem.id));
@@ -530,6 +654,7 @@ export default function DiaryPage() {
                     onTimeChange={handleTimeChange}
                     onAddFood={handleAddFood}
                     onAddFoodByBarcode={handleAddFoodByBarcode}
+                    onAddFoodByPhoto={handleAddFoodByPhoto}
                     onUpdateFood={handleUpdateFood}
                     onDeleteFood={handleDeleteFood}
                     onDelete={handleDeleteMeal}

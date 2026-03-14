@@ -43,7 +43,9 @@ export function middleware(req: NextRequest) {
     '/api/meals',
     '/api/menu',
     '/api/profile',
+    '/api/diary',
     '/api/parse-food',
+    '/api/parse-food-image',
   ];
 
   const isProtectedPath = protectedPaths.some((path) =>
@@ -72,6 +74,7 @@ export const config = {
     '/api/meals/:path*',
     '/api/menu/:path*',
     '/api/profile/:path*',
+    '/api/diary/:path*',
     '/login',
     '/register',
     '/forgot-password',

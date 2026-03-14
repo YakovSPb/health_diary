@@ -32,13 +32,21 @@ export async function POST(request: NextRequest) {
     const { barcode, mealId, date, weightGrams: rawWeight } = bodySchema.parse(body);
     const weightGrams = rawWeight ?? 100;
 
+    console.log('[add-by-barcode] Запрос:', { barcode, mealId: mealId ?? null });
     const barcodeResult = await findProductByBarcode(barcode);
     if (!barcodeResult?.product?.name) {
+      console.log('[add-by-barcode] 404: товар не найден, barcode:', barcode);
       return NextResponse.json(
         { error: 'Товар по штрихкоду не найден.' },
         { status: 404 }
       );
     }
+
+    console.log('[add-by-barcode] По штрихкоду найден:', {
+      barcode,
+      source: barcodeResult.source,
+      product: barcodeResult.product,
+    });
 
     const productName = barcodeResult.product.name;
     let name: string;
