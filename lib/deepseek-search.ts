@@ -206,3 +206,64 @@ export async function parseFoodFromText(text: string): Promise<ParsedFood> {
     ...(Number.isNaN(sugars) ? {} : { sugarsPer100g: Math.max(0, sugars) }),
   };
 }
+
+const WORKOUT_CALORIES_PROMPT = `Ты — эксперт по расходу калорий при физической нагрузке. По описанию тренировок пользователя оцени СРЕДНИЙ расход дополнительных калорий В ДЕНЬ (ккал/день) — то есть переведи описание в среднее по неделе и выдай ккал в сутки.
+
+Учитывай: частоту (раз в неделю), длительность (часы, минуты), тип нагрузки (силовая, кардио, бег, зал и т.д.). Ответь ТОЛЬКО валидным JSON без markdown и пояснений: {"caloriesPerDay": число}. Число — целое, 0–2000.`;
+
+/**
+ * Оценка среднего расхода ккал/день по описанию тренировок через DeepSeek.
+ * Возвращает 0 при отсутствии ключа или ошибке.
+ */
+export async function estimateWorkoutCaloriesFromText(
+  text: string
+): Promise<number> {
+  const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
+  const { url, model } = getDeepSeekConfig();
+
+  if (!apiKey || !text.trim()) {
+    return 0;
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: WORKOUT_CALORIES_PROMPT },
+          { role: 'user', content: text.trim() },
+        ],
+        max_tokens: 128,
+        response_format: { type: 'json_object' },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const raw = await res.text();
+    if (!res.ok) {
+      console.error('[DeepSeek workout-calories] HTTP', res.status, raw.slice(0, 200));
+      return 0;
+    }
+
+    const data = JSON.parse(raw) as { choices?: Array<{ message?: { content?: string } }> };
+    const content = data?.choices?.[0]?.message?.content?.trim();
+    if (!content) return 0;
+
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return 0;
+
+    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+    const value = Number(parsed.caloriesPerDay ?? parsed.calories ?? parsed.kcal ?? 0);
+    if (Number.isNaN(value) || value < 0) return 0;
+    return Math.min(2000, Math.round(value));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[DeepSeek workout-calories]', msg);
+    return 0;
+  }
+}

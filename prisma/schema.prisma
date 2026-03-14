@@ -17,10 +17,13 @@ model User {
   image         String?
   password      String?
 
-  height         Int?     // Рост в см
-  weight         Float?   // Вес в кг
-  birthDate      DateTime? // Дата рождения (для расчёта возраста)
-  calorieDeficit Int?     // Целевой дефицит ккал/день (для похудения)
+  height             Int?     // Рост в см
+  weight             Float?   // Вес в кг
+  birthDate          DateTime? // Дата рождения (для расчёта возраста)
+  calorieDeficit     Int?     // Целевой дефицит ккал/день (для похудения)
+  dailyCalorieNorm   Int?     // Норма ккал/день (редактируемая)
+  dailyCalorieGoal   Int?     // Цель ккал/день (редактируемая)
+  workouts           String?  // Текст тренировок для учёта при расчёте
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -14,6 +14,9 @@ const profileUpdateSchema = z.object({
   weight: z.number().min(20).max(300).nullable().optional(),
   birthDate: z.string().nullable().optional(),
   calorieDeficit: z.number().int().min(0).max(2000).nullable().optional(),
+  dailyCalorieNorm: z.number().int().min(0).max(10000).nullable().optional(),
+  dailyCalorieGoal: z.number().int().min(0).max(10000).nullable().optional(),
+  workouts: z.string().max(5000).nullable().optional(),
 });
 
 export async function GET() {
@@ -32,6 +35,9 @@ export async function GET() {
         weight: true,
         birthDate: true,
         calorieDeficit: true,
+        dailyCalorieNorm: true,
+        dailyCalorieGoal: true,
+        workouts: true,
       },
     });
 
@@ -79,8 +85,16 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const { name, height, weight, birthDate, calorieDeficit } =
-      validationResult.data;
+    const {
+      name,
+      height,
+      weight,
+      birthDate,
+      calorieDeficit,
+      dailyCalorieNorm,
+      dailyCalorieGoal,
+      workouts,
+    } = validationResult.data;
 
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
@@ -92,6 +106,9 @@ export async function PATCH(req: NextRequest) {
           birthDate: birthDate ? new Date(birthDate) : null,
         }),
         ...(calorieDeficit !== undefined && { calorieDeficit }),
+        ...(dailyCalorieNorm !== undefined && { dailyCalorieNorm }),
+        ...(dailyCalorieGoal !== undefined && { dailyCalorieGoal }),
+        ...(workouts !== undefined && { workouts: workouts === '' ? null : workouts }),
       },
     });
 
@@ -104,6 +121,9 @@ export async function PATCH(req: NextRequest) {
         weight: updatedUser.weight,
         birthDate: updatedUser.birthDate?.toISOString().split('T')[0] ?? null,
         calorieDeficit: updatedUser.calorieDeficit,
+        dailyCalorieNorm: updatedUser.dailyCalorieNorm,
+        dailyCalorieGoal: updatedUser.dailyCalorieGoal,
+        workouts: updatedUser.workouts,
       },
     });
   } catch (error) {

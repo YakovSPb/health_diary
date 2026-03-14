@@ -25,6 +25,9 @@ export default async function ProfilePage() {
       weight: true,
       birthDate: true,
       calorieDeficit: true,
+      dailyCalorieNorm: true,
+      dailyCalorieGoal: true,
+      workouts: true,
     },
   });
 
@@ -51,6 +54,9 @@ export default async function ProfilePage() {
             weight: user.weight,
             birthDate: user.birthDate ? user.birthDate.toISOString().split('T')[0] : null,
             calorieDeficit: user.calorieDeficit,
+            dailyCalorieNorm: user.dailyCalorieNorm,
+            dailyCalorieGoal: user.dailyCalorieGoal,
+            workouts: user.workouts,
           }}
         />
 
