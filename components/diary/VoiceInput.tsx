@@ -42,8 +42,14 @@ export default function VoiceInput({
   useEffect(() => {
     if (!isSupported || typeof window === 'undefined') return;
 
-    // @ts-expect-error: Web Speech API доступен не во всех браузерах
-    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    type SpeechRecognitionCtor = new () => SpeechRecognition;
+    const w = window as Window &
+      typeof globalThis & {
+        SpeechRecognition?: SpeechRecognitionCtor;
+        webkitSpeechRecognition?: SpeechRecognitionCtor;
+      };
+
+    const SpeechRecognitionCtor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!SpeechRecognitionCtor) return;
     const recognition: SpeechRecognition = new SpeechRecognitionCtor();
 
