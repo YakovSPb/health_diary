@@ -37,12 +37,14 @@ export default function BarcodeScannerModal({
     if (!open || typeof window === 'undefined') return;
 
     hasDetectedRef.current = false;
-    setError(null);
 
     let cancelled = false;
 
     const startCamera = async () => {
       try {
+        setError(null);
+        setBarcodeValue('');
+        setIsCameraLoading(true);
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: 'environment' } },
         });

@@ -327,8 +327,9 @@ export default function DiaryPage() {
 
       if (!parseResponse.ok) {
         const errorData = await parseResponse.json().catch(() => ({}));
+        const detail = (errorData?.message as string) || (errorData?.error as string);
         const message =
-          (errorData?.error as string) ??
+          detail ||
           (parseResponse.status === 415
             ? 'Неверный формат изображения'
             : 'Не удалось распознать еду по фото');
@@ -658,7 +659,6 @@ export default function DiaryPage() {
                     onUpdateFood={handleUpdateFood}
                     onDeleteFood={handleDeleteFood}
                     onDelete={handleDeleteMeal}
-                    onAnalyze={() => {}}
                     savedToMenuFoodIds={savedToMenuFoodIds}
                     foodIdsFromMenu={foodIdsFromMenu}
                     onSaveToMenu={handleSaveToMenu}

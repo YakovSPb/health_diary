@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "FoodItem" ADD COLUMN "sugarsPer100g" DOUBLE PRECISION;

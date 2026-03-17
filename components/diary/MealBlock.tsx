@@ -95,10 +95,12 @@ function FoodPhotoModal({
     });
 
     setSelectedFile(file);
+    if (!isSubmitting) await onSubmit(file);
   };
 
   const handleFileChange = (file: File | null) => {
     setSelectedFile(file);
+    if (file && !isSubmitting) onSubmit(file);
   };
 
   const handleClose = () => {
@@ -182,6 +184,7 @@ function FoodPhotoModal({
               onChange={(e) => {
                 const file = e.target.files?.[0] ?? null;
                 handleFileChange(file);
+                e.target.value = '';
               }}
               className="block w-full text-sm text-gray-900 dark:text-gray-100 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
             />
@@ -256,7 +259,6 @@ interface MealBlockProps {
   }) => void;
   onDeleteFood: (mealId: string, foodId: string) => void;
   onDelete: (id: string) => void;
-  onAnalyze: (id: string) => void;
   savedToMenuFoodIds?: Set<string>;
   /** ID продуктов, добавленных из меню в этой сессии (для зелёной точки «из меню») */
   foodIdsFromMenu?: Set<string>;
@@ -281,7 +283,6 @@ export default function MealBlock({
   onUpdateFood,
   onDeleteFood,
   onDelete,
-  onAnalyze,
   savedToMenuFoodIds,
   foodIdsFromMenu,
   onSaveToMenu,
@@ -289,16 +290,27 @@ export default function MealBlock({
 }: MealBlockProps) {
   const [time, setTime] = useState(initialTime);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAddingFood, setIsAddingFood] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isAddingFromPhoto, setIsAddingFromPhoto] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [pickerHour, setPickerHour] = useState(0);
+  const [pickerMinute, setPickerMinute] = useState(0);
+  const timePickerFirstFocusRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     setIsExpanded(defaultExpanded);
   }, [defaultExpanded]);
+
+  useEffect(() => {
+    if (!timePickerOpen) return;
+    const [h, m] = time.split(':').map(Number);
+    setPickerHour(Number.isNaN(h) ? 0 : Math.max(0, Math.min(23, h)));
+    setPickerMinute(Number.isNaN(m) ? 0 : Math.max(0, Math.min(59, m)));
+    const focusTimer = window.setTimeout(() => timePickerFirstFocusRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [timePickerOpen, time]);
 
   const handleTimeChange = (newTime: string) => {
     setTime(newTime);
@@ -348,27 +360,89 @@ export default function MealBlock({
     }
   };
 
-  const handleAnalyzeClick = async () => {
-    setAnalysisResult(null);
-    setIsAnalyzing(true);
-    try {
-      const res = await fetch(`/api/meals/${id}/analyze`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setAnalysisResult(data.analysis || 'Нет данных');
-    } catch {
-      setAnalysisResult('Ошибка загрузки анализа');
-    } finally {
-      setIsAnalyzing(false);
-      onAnalyze(id);
+  const touchIconBtn =
+    'min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg transition-colors touch-manipulation active:scale-95';
+
+  const closeTimePicker = () => setTimePickerOpen(false);
+
+  const confirmTimePicker = () => {
+    const newTime = `${String(pickerHour).padStart(2, '0')}:${String(pickerMinute).padStart(2, '0')}`;
+    handleTimeChange(newTime);
+    setTimePickerOpen(false);
+  };
+
+  const ChevronDown = () => (
+    <svg className="w-4 h-4 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+  const ChevronUp = () => (
+    <svg className="w-4 h-4 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    </svg>
+  );
+
+  type MealIconType =
+    | 'breakfast'
+    | 'lunch'
+    | 'afternoonSnack'
+    | 'dinner'
+    | 'snack';
+
+  const getMealIcon = (name: string): MealIconType | null => {
+    const normalizedName = name.toLowerCase();
+    if (normalizedName.includes('завтрак')) return 'breakfast';
+    if (normalizedName.includes('обед')) return 'lunch';
+    if (normalizedName.includes('полдник')) return 'afternoonSnack';
+    if (normalizedName.includes('ужин')) return 'dinner';
+    if (normalizedName.includes('перекус')) return 'snack';
+    return null;
+  };
+
+  const renderMealIcon = (iconType: MealIconType) => {
+    const iconClassName = 'h-4 w-4 shrink-0';
+    switch (iconType) {
+      case 'breakfast':
+        return (
+          <svg className={iconClassName} viewBox="0 0 20 20" aria-hidden>
+            <circle cx="10" cy="10" r="7" fill="none" stroke="#eab308" strokeWidth="1.5" />
+            <path d="M10 3 A7 7 0 0 0 10 17 Z" fill="#eab308" />
+          </svg>
+        );
+      case 'lunch':
+        return (
+          <svg className={iconClassName} viewBox="0 0 20 20" aria-hidden>
+            <circle cx="10" cy="10" r="7" fill="#3b82f6" />
+          </svg>
+        );
+      case 'afternoonSnack':
+        return (
+          <svg className={iconClassName} viewBox="0 0 20 20" aria-hidden>
+            <path d="M10 4 L16 10 L10 16 L4 10 Z" fill="#f97316" />
+          </svg>
+        );
+      case 'dinner':
+        return (
+          <svg className={iconClassName} viewBox="0 0 20 20" aria-hidden>
+            <circle cx="10" cy="10" r="7" fill="none" stroke="#ef4444" strokeWidth="1.5" />
+            <path d="M10 3 A7 7 0 0 1 10 17 Z" fill="#ef4444" />
+          </svg>
+        );
+      case 'snack':
+        return (
+          <svg className={iconClassName} viewBox="0 0 20 20" aria-hidden>
+            <path d="M13.5 3.5a6.5 6.5 0 11-6 10.5 5.5 5.5 0 006-10.5z" fill="#a855f7" />
+          </svg>
+        );
+      default:
+        return null;
     }
   };
 
-  const touchIconBtn =
-    'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors touch-manipulation active:scale-95';
+  const mealIcon = getMealIcon(mealName);
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 sm:p-6 mb-4">
+    <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-0 mb-4">
       {onAddFoodByBarcode && (
         <BarcodeScannerModal
           open={showBarcodeScanner}
@@ -390,62 +464,140 @@ export default function MealBlock({
           onSubmit={handlePhotoSubmit}
         />
       )}
-      <div className="flex gap-3 mb-4">
+      {/* Заголовок: шеврон, время, название; при развёрнутом виде время меняется через попап */}
+      <div className="h-10 flex items-stretch gap-0 mb-2 rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
         <button
           type="button"
-          onClick={() => setIsExpanded((e) => !e)}
-          className={`${touchIconBtn} shrink-0 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400`}
-          title={isExpanded ? 'Свернуть' : 'Развернуть'}
+          onClick={() => setIsExpanded((v) => !v)}
+          className="h-10 flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer touch-manipulation hover:bg-gray-50 dark:hover:bg-gray-700/50 px-2 transition-colors"
           aria-expanded={isExpanded}
-          aria-label={isExpanded ? 'Свернуть приём' : 'Развернуть приём'}
+          aria-label={isExpanded ? 'Свернуть приём пищи' : 'Развернуть приём пищи'}
         >
-          <svg
-            className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setIsExpanded((e) => !e)}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setIsExpanded((prev) => !prev)}
-          className="flex flex-wrap items-center gap-3 flex-1 min-w-0 cursor-pointer select-none"
-          aria-expanded={isExpanded}
-        >
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => handleTimeChange(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            className="text-base px-3 py-2.5 sm:px-4 sm:py-2 font-semibold border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white min-h-[44px]"
-          />
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-            {mealName}
+          <span className="text-gray-500 dark:text-gray-400" aria-hidden>
+            {isExpanded ? <ChevronUp /> : <ChevronDown />}
+          </span>
+          {isExpanded ? (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                setTimePickerOpen(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setTimePickerOpen(true);
+                }
+              }}
+              aria-haspopup="dialog"
+              aria-expanded={timePickerOpen}
+              aria-label="Изменить время приёма"
+              className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums px-2 py-0.5 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation leading-none"
+            >
+              {time}
+            </span>
+          ) : (
+            <span className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums leading-none">
+              {time}
+            </span>
+          )}
+          <h3 className="flex items-center gap-2 text-base font-bold text-gray-900 dark:text-white truncate">
+            {mealIcon ? renderMealIcon(mealIcon) : null}
+            <span className="truncate">{mealName}</span>
           </h3>
-          {foodItems.length > 0 && (
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+          {!isExpanded && foodItems.length > 0 && (
+            <span className="hidden sm:inline text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
               Б: {totalProtein.toFixed(0)} · Ж: {totalFat.toFixed(0)} · У: {totalCarbs.toFixed(0)} · {Math.round(totalCalories)} ккал
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+        </button>
+        {isExpanded && (
           <button
             type="button"
-            onClick={() => onDelete(id)}
-            className={`${touchIconBtn} text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30`}
-            title="Удалить приём"
-            aria-label="Удалить приём"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(id);
+            }}
+            className={`${touchIconBtn} text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 shrink-0 border-l border-gray-300 dark:border-gray-600`}
+            title="Удалить приём пищи"
+            aria-label="Удалить приём пищи"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
-        </div>
+        )}
       </div>
+
+      {/* Попап выбора времени */}
+      {timePickerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={closeTimePicker}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="time-picker-title"
+          aria-label="Выбор времени приёма"
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 w-full max-w-[280px]"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') closeTimePicker();
+            }}
+          >
+            <p id="time-picker-title" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Время приёма
+            </p>
+            <div className="flex gap-2 mb-3">
+              <select
+                ref={timePickerFirstFocusRef}
+                value={pickerHour}
+                onChange={(e) => setPickerHour(Number(e.target.value))}
+                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] touch-manipulation"
+                aria-label="Часы"
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i}>
+                    {String(i).padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+              <span className="flex items-center text-gray-500 dark:text-gray-400 font-semibold">:</span>
+              <select
+                value={pickerMinute}
+                onChange={(e) => setPickerMinute(Number(e.target.value))}
+                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px] touch-manipulation"
+                aria-label="Минуты"
+              >
+                {Array.from({ length: 60 }, (_, i) => (
+                  <option key={i} value={i}>
+                    {String(i).padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={closeTimePicker}
+                className="flex-1 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 touch-manipulation"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={confirmTimePicker}
+                className="flex-1 min-h-[44px] rounded-lg bg-blue-600 text-white hover:bg-blue-700 touch-manipulation"
+              >
+                Готово
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isExpanded && foodItems.length > 0 && (
         <>
@@ -460,7 +612,7 @@ export default function MealBlock({
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Вес, г</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">К/100</th>
                   <th className="text-left py-2 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300">ккал</th>
-                  <th className="w-[5.5rem]"></th>
+                  <th className="w-22"></th>
                 </tr>
               </thead>
               <tbody>
@@ -545,42 +697,8 @@ export default function MealBlock({
                   </span>
                 </div>
               )}
-              {foodItems.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleAnalyzeClick}
-                  disabled={isAnalyzing}
-                  className={`${touchIconBtn} text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50`}
-                  title={isAnalyzing ? 'Анализ...' : 'Анализ приёма'}
-                  aria-label="Анализ приёма"
-                >
-                  {isAnalyzing ? (
-                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  )}
-                </button>
-              )}
             </div>
           </div>
-
-          {analysisResult && (
-            <div className="mt-4 p-4 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-              {analysisResult}
-              <button
-                type="button"
-                onClick={() => setAnalysisResult(null)}
-                className="mt-2 text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                Скрыть
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

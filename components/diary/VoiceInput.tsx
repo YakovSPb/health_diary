@@ -9,6 +9,12 @@ interface VoiceInputProps {
   onBarcodeClick?: () => void;
   /** При передаче рендерится кнопка «Фото» (распознавание еды по фото) */
   onPhotoClick?: () => void;
+  /** Скрыть кнопку ручного ввода (плюсик) */
+  hideManualInput?: boolean;
+  /** Скрыть кнопку штрихкода (даже если передан onBarcodeClick) */
+  hideBarcode?: boolean;
+  /** Скрыть кнопку фото (даже если передан onPhotoClick) */
+  hidePhoto?: boolean;
 }
 
 // Проверяем поддержку Web Speech API
@@ -22,24 +28,24 @@ export default function VoiceInput({
   disabled,
   onBarcodeClick,
   onPhotoClick,
+  hideManualInput = false,
+  hideBarcode = false,
+  hidePhoto = false,
 }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSupported] = useState(() => isSpeechRecognitionSupported());
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const recognitionRef = useRef<any>(null);
-
-  useEffect(() => {
-    setIsSupported(isSpeechRecognitionSupported());
-  }, []);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
     if (!isSupported || typeof window === 'undefined') return;
 
-    // @ts-ignore
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    // @ts-expect-error: Web Speech API доступен не во всех браузерах
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
+    const recognition: SpeechRecognition = new SpeechRecognitionCtor();
 
     recognition.lang = 'ru-RU';
     recognition.continuous = false;
@@ -49,14 +55,18 @@ export default function VoiceInput({
       setIsListening(true);
     };
 
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0]?.transcript ?? '';
+      if (!transcript.trim()) {
+        setIsListening(false);
+        return;
+      }
       onResult(transcript);
       setIsListening(false);
       setError(null);
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: { error: string }) => {
       setIsListening(false);
       
       // Обработка различных типов ошибок
@@ -107,8 +117,7 @@ export default function VoiceInput({
       try {
         setError(null);
         recognitionRef.current.start();
-      } catch (error) {
-        // Показываем ошибку в UI вместо консоли
+      } catch {
         setError('Не удалось запустить распознавание речи');
       }
     }
@@ -205,31 +214,41 @@ export default function VoiceInput({
       {/* Кнопки ввода: при onBarcodeClick/onPhotoClick — сетка на всю ширину */}
       <div
         className={
-          onBarcodeClick || onPhotoClick
-            ? `w-full grid gap-2 ${onBarcodeClick && onPhotoClick ? 'grid-cols-4' : 'grid-cols-3'}`
+          ((onBarcodeClick && !hideBarcode) || (onPhotoClick && !hidePhoto))
+            ? `w-full grid gap-2 ${
+                (onBarcodeClick && !hideBarcode) && (onPhotoClick && !hidePhoto)
+                  ? hideManualInput
+                    ? 'grid-cols-3'
+                    : 'grid-cols-4'
+                  : hideManualInput
+                    ? 'grid-cols-2'
+                    : 'grid-cols-3'
+              }`
             : 'flex items-center space-x-2'
         }
       >
-        <button
-          onClick={() => setShowTextInput(true)}
-          disabled={disabled}
-          className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed touch-manipulation active:scale-95 w-full"
-          title="Добавить вручную"
-        >
-          <svg
-            className="w-5 h-5 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {!hideManualInput && (
+          <button
+            onClick={() => setShowTextInput(true)}
+            disabled={disabled}
+            className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed touch-manipulation active:scale-95 w-full"
+            title="Добавить вручную"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-5 h-5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </button>
+        )}
         {(onBarcodeClick || isSupported) && (
           <button
             onClick={isListening ? stopListening : startListening}
@@ -246,7 +265,7 @@ export default function VoiceInput({
             </svg>
           </button>
         )}
-        {onBarcodeClick && (
+        {onBarcodeClick && !hideBarcode && (
           <button
             type="button"
             onClick={onBarcodeClick}
@@ -259,7 +278,7 @@ export default function VoiceInput({
             </svg>
           </button>
         )}
-        {onPhotoClick && (
+        {onPhotoClick && !hidePhoto && (
           <button
             type="button"
             onClick={onPhotoClick}

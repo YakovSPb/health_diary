@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth';
+import { prepareSearchQuery, scoreMenuItemWithRecipe } from '@/lib/menu-search';
 import { prisma } from '@/lib/prisma';
+import { normalizeRecipeSearchQuery } from '@/lib/recipe-name';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -14,6 +16,9 @@ const createMenuSchema = z.object({
   fatPer100g: z.coerce.number().min(0).optional(),
   caloriesPer100g: z.coerce.number().min(0).optional(),
   hasSugar: z.boolean().optional(),
+  defaultPortionGrams: z.coerce.number().min(1).max(10000).optional(),
+  /** Текст рецепта (ингредиенты). Если передан — пункт считается рецептом и показывается на странице Рецепты */
+  recipeText: z.string().max(10000).optional(),
 });
 
 const DEFAULT_LIMIT = 10;
@@ -30,39 +35,55 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
     const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get('limit') ?? String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT));
     const search = (searchParams.get('search') ?? '').trim();
+    const recipesOnly = searchParams.get('recipesOnly') === 'true';
+
+    const baseWhere: { userId: string; recipeText?: { not: null } } = {
+      userId: session.user.id,
+    };
+    if (recipesOnly) {
+      baseWhere.recipeText = { not: null };
+    }
 
     let items: Awaited<ReturnType<typeof prisma.menuItem.findMany>>;
     let total: number;
 
-    if (search.trim()) {
-      const all = await prisma.menuItem.findMany({
-        where: { userId: session.user.id },
-        orderBy: [{ name: 'asc' }],
+    if (search) {
+      const cleanedSearch = recipesOnly
+        ? normalizeRecipeSearchQuery(search)
+        : search.replace(/\d+\s*(г|грамм[а-я]*|гр\.?|мл|кг|л)/gi, '').trim();
+      const preparedQuery = prepareSearchQuery(cleanedSearch);
+
+      const allItems = await prisma.menuItem.findMany({
+        where: baseWhere,
       });
-      const searchWords = search
-        .toLowerCase()
-        .replace(/ё/g, 'е')
-        .split(/\s+/)
-        .filter(Boolean);
-      const filtered = all.filter((i) => {
-        const nameWords = i.name
-          .toLowerCase()
-          .replace(/ё/g, 'е')
-          .split(/\s+/)
-          .filter(Boolean);
-        return nameWords.length > 0 && nameWords.every((nw) => searchWords.includes(nw));
+
+      const scoredItems = allItems
+        .map((item) => {
+          const score = scoreMenuItemWithRecipe(
+            preparedQuery,
+            item.name,
+            recipesOnly ? normalizeRecipeSearchQuery(item.recipeText ?? '') || undefined : item.recipeText
+          );
+          return { item, score };
+        })
+        .filter(({ score }) => score > 0);
+
+      scoredItems.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.item.name.localeCompare(b.item.name);
       });
-      total = filtered.length;
-      items = filtered.slice((page - 1) * limit, page * limit);
+
+      total = scoredItems.length;
+      items = scoredItems.slice((page - 1) * limit, page * limit).map(({ item }) => item);
     } else {
       [items, total] = await Promise.all([
         prisma.menuItem.findMany({
-          where: { userId: session.user.id },
+          where: baseWhere,
           orderBy: [{ name: 'asc' }],
           skip: (page - 1) * limit,
           take: limit,
         }),
-        prisma.menuItem.count({ where: { userId: session.user.id } }),
+        prisma.menuItem.count({ where: baseWhere }),
       ]);
     }
 
@@ -115,6 +136,12 @@ export async function POST(request: NextRequest) {
             fatPer100g: fat,
             caloriesPer100g,
             hasSugar,
+            ...(validated.defaultPortionGrams !== undefined && {
+              defaultPortionGrams: validated.defaultPortionGrams,
+            }),
+            ...(validated.recipeText !== undefined && {
+              recipeText: validated.recipeText ?? null,
+            }),
           },
         })
       : await prisma.menuItem.create({
@@ -126,6 +153,8 @@ export async function POST(request: NextRequest) {
             fatPer100g: fat,
             caloriesPer100g,
             hasSugar,
+            defaultPortionGrams: validated.defaultPortionGrams ?? 100,
+            recipeText: validated.recipeText ?? null,
           },
         });
 

@@ -1,4 +1,5 @@
 import ProfileForm from '@/components/profile/ProfileForm';
+import ThemeToggle from '@/components/profile/ThemeToggle';
 import WearableTokens from '@/components/profile/WearableTokens';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -59,6 +60,10 @@ export default async function ProfilePage() {
             workouts: user.workouts,
           }}
         />
+
+        <div className="mt-6">
+          <ThemeToggle />
+        </div>
 
         <div className="mt-8">
           <WearableTokens />

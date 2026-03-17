@@ -89,6 +89,19 @@ export default function FoodItemRow({
     !Number.isNaN(caloriesPer100Num) && !Number.isNaN(weightNumForCalories)
       ? (caloriesPer100Num * weightNumForCalories) / 100
       : totalCalories;
+
+  const displayTotalCarbs =
+    !Number.isNaN(carbsNum) && !Number.isNaN(weightNumForCalories)
+      ? (carbsNum * weightNumForCalories) / 100
+      : totalCarbs;
+  const displayTotalProtein =
+    !Number.isNaN(proteinNum) && !Number.isNaN(weightNumForCalories)
+      ? (proteinNum * weightNumForCalories) / 100
+      : totalProtein;
+  const displayTotalFat =
+    !Number.isNaN(fatNum) && !Number.isNaN(weightNumForCalories)
+      ? (fatNum * weightNumForCalories) / 100
+      : totalFat;
   const caloriesChanged =
     !Number.isNaN(caloriesPer100Num) &&
     Math.round(caloriesPer100Num) !== baselineMenu.caloriesPer100;
@@ -283,6 +296,9 @@ export default function FoodItemRow({
               step={1}
             />
           </div>
+          <span className="text-gray-700 dark:text-gray-300">
+            · Б:{displayTotalProtein.toFixed(0)} Ж:{displayTotalFat.toFixed(0)} У:{displayTotalCarbs.toFixed(0)}
+          </span>
           <span>· ккал: {Math.round(displayCalories)}</span>
         </div>
       </div>
@@ -309,6 +325,9 @@ export default function FoodItemRow({
             placeholder="Название"
             rows={2}
           />
+        </div>
+        <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          Б:{displayTotalProtein.toFixed(0)} Ж:{displayTotalFat.toFixed(0)} У:{displayTotalCarbs.toFixed(0)}
         </div>
       </td>
       <td className="py-3 px-2 sm:px-4">

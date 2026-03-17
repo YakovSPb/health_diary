@@ -90,11 +90,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ food, menuItemId });
   } catch (error) {
-    console.error('[parse-food-image]', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[parse-food-image]', message, error);
     return NextResponse.json(
       {
         error: 'Не удалось распознать еду по фото',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message,
       },
       { status: 500 }
     );

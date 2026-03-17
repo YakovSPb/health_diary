@@ -1,17 +1,13 @@
 'use client';
 
-import type { ReactNode } from 'react';
-
 interface DiaryHeaderProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
-  voiceAddButton?: ReactNode;
 }
 
 export default function DiaryHeader({
   selectedDate,
   onDateChange,
-  voiceAddButton,
 }: DiaryHeaderProps) {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ru-RU', {
@@ -20,6 +16,17 @@ export default function DiaryHeader({
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const formatShortDate = (date: Date) => {
+    const weekday = date.toLocaleDateString('ru-RU', { weekday: 'long' });
+    const formattedWeekday = `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}`;
+    const datePart = date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+    return `${formattedWeekday} ${datePart}г.`;
   };
 
   const changeDate = (days: number) => {
@@ -37,10 +44,41 @@ export default function DiaryHeader({
     'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors touch-manipulation active:scale-95';
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 mb-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        {voiceAddButton != null ? <div className="flex items-center gap-2">{voiceAddButton}</div> : null}
-        <div className="flex flex-1 items-center justify-center gap-2 sm:gap-4 min-w-0">
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg px-4 sm:pb-4 mb-6">
+      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
+        {/* Мобильный заголовок: только навигация по дате */}
+        <div className="flex items-center justify-between gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={() => changeDate(-1)}
+            className={`${touchButtonClass} p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}
+            aria-label="Предыдущий день"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <div className="flex-1 px-1 flex items-center justify-center">
+            <div className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
+              {formatShortDate(selectedDate)}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => changeDate(1)}
+            className={`${touchButtonClass} p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300`}
+            aria-label="Следующий день"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Дата и навигация — только для планшета/десктопа */}
+        <div className="hidden md:flex flex-1 items-center justify-between gap-2 sm:gap-4 min-w-0 mt-2 md:mt-0">
           <button
             type="button"
             onClick={() => changeDate(-1)}
@@ -60,7 +98,7 @@ export default function DiaryHeader({
               <button
                 type="button"
                 onClick={goToToday}
-                className="mt-1 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 min-h-[44px] touch-manipulation"
+                className="mt-1 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 min-h-[44px] touch-manipulation active:opacity-80"
               >
                 Перейти к сегодня
               </button>

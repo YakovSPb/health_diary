@@ -136,6 +136,10 @@ model MenuItem {
   fatPer100g     Float    @default(0)
   caloriesPer100g Float   @default(0) // можно вычислять: 4*белки+4*угл+9*жиры
   hasSugar       Boolean  @default(false) // В блюде есть сахар (подсветка в дневнике)
+  /// Базовая порция в граммах (по умолчанию 100 г), используется при добавлении из меню без указанного веса
+  defaultPortionGrams Float @default(100)
+  /// Текст рецепта (ингредиенты). Если задан — пункт считается рецептом и показывается на странице Рецепты
+  recipeText     String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

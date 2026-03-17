@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: '/diary', label: 'Дневник' },
   { href: '/monitoring', label: 'Мониторинг' },
   { href: '/menu', label: 'Меню' },
+  { href: '/recipes', label: 'Рецепты' },
   { href: '/profile', label: 'Профиль' },
 ] as const;
 

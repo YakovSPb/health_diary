@@ -14,6 +14,8 @@ const updateMenuSchema = z.object({
   fatPer100g: z.coerce.number().min(0).optional(),
   caloriesPer100g: z.coerce.number().min(0).optional(),
   hasSugar: z.boolean().optional(),
+  defaultPortionGrams: z.coerce.number().min(1).max(10000).optional(),
+  recipeText: z.string().max(10000).optional(),
 });
 
 export async function PATCH(
@@ -52,6 +54,12 @@ export async function PATCH(
         fatPer100g: fat,
         caloriesPer100g,
         ...(validated.hasSugar !== undefined && { hasSugar: validated.hasSugar }),
+        ...(validated.defaultPortionGrams !== undefined && {
+          defaultPortionGrams: validated.defaultPortionGrams,
+        }),
+        ...(validated.recipeText !== undefined && {
+          recipeText: validated.recipeText ?? null,
+        }),
       },
     });
 

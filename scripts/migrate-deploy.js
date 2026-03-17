@@ -5,8 +5,6 @@
  * Использование: node scripts/migrate-deploy.js
  */
 
-const { execSync } = require('child_process');
-
 const maxAttempts = 5;
 const delayMs = 12000;
 
@@ -15,6 +13,7 @@ function sleep(ms) {
 }
 
 async function main() {
+  const { execSync } = await import('node:child_process');
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       if (attempt > 1) {
