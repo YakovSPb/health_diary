@@ -382,9 +382,9 @@ export default function FoodItemRow({
               step={1}
             />
           </div>
-          <div className="col-span-2 max-w-[170px]">
+          <div className="min-w-0">
             <label className={compactCardLabel}>Вес, г</label>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <input
                 type="number"
                 inputMode="numeric"
@@ -394,12 +394,12 @@ export default function FoodItemRow({
                 onBlur={saveOnBlur}
                 min={0}
                 step={1}
-                className={`flex-1 ${compactCardInput}`}
+                className={`w-full min-w-0 ${compactCardInput}`}
               />
               <button
                 type="button"
                 onClick={openWeightCalc}
-                className="min-h-[30px] min-w-[30px] h-[30px] w-[30px] flex items-center justify-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md border border-gray-200 dark:border-gray-600 transition-colors touch-manipulation active:scale-95 shrink-0"
+                className="min-h-[28px] min-w-[28px] h-7 w-7 flex items-center justify-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md border border-gray-200 dark:border-gray-600 transition-colors touch-manipulation active:scale-95 shrink-0"
                 aria-label="Калькулятор веса"
                 title="Изменить вес (+ − × ÷)"
               >
