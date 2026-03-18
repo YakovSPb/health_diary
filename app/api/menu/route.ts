@@ -5,6 +5,7 @@ import { isSharedMenuEnabled, sharedMenuRequest } from '@/lib/shared-menu-servic
 import { normalizeRecipeSearchQuery } from '@/lib/recipe-name';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { Session } from 'next-auth';
 
 function caloriesFromBju(protein: number, carbs: number, fat: number): number {
   return protein * 4 + carbs * 4 + fat * 9;
@@ -25,7 +26,7 @@ const createMenuSchema = z.object({
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 
-function getSessionEmail(session: Awaited<ReturnType<typeof auth>>): string | null {
+function getSessionEmail(session: Session | null): string | null {
   const email = session?.user?.email?.trim().toLowerCase();
   return email || null;
 }

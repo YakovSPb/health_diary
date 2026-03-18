@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Session } from 'next-auth';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isSharedMenuEnabled, sharedMenuRequest } from '@/lib/shared-menu-service';
@@ -19,7 +20,7 @@ const updateMenuSchema = z.object({
   recipeText: z.string().max(10000).optional(),
 });
 
-function getSessionEmail(session: Awaited<ReturnType<typeof auth>>): string | null {
+function getSessionEmail(session: Session | null): string | null {
   const email = session?.user?.email?.trim().toLowerCase();
   return email || null;
 }
