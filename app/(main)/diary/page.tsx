@@ -6,6 +6,7 @@ import MealBlock from '@/components/diary/MealBlock';
 import { getTargetCaloriesPerDay } from '@/lib/calories';
 import { formatDateForApi, getCurrentTime, getMealNameWithOrder, isMealWithin30Minutes } from '@/lib/date-utils';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 interface FoodItem {
@@ -63,6 +64,7 @@ interface ProfileCalories {
 
 export default function DiaryPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -663,6 +665,10 @@ export default function DiaryPage() {
                     foodIdsFromMenu={foodIdsFromMenu}
                     onSaveToMenu={handleSaveToMenu}
                     defaultExpanded={isMealWithin30Minutes(selectedDate, meal.time)}
+                    onOpenManualSearch={() => {
+                      const date = formatDateForApi(selectedDate);
+                      router.push(`/diary/search?date=${encodeURIComponent(date)}`);
+                    }}
                   />
                 ))}
 

@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 interface VoiceInputProps {
   onResult: (text: string) => void;
   disabled?: boolean;
+  /** При передаче кнопка «+» открывает внешний экран поиска */
+  onManualInputClick?: () => void;
   /** При передаче рендерится кнопка «Штрихкод» */
   onBarcodeClick?: () => void;
   /** При передаче рендерится кнопка «Фото» (распознавание еды по фото) */
@@ -26,6 +28,7 @@ const isSpeechRecognitionSupported = () => {
 export default function VoiceInput({
   onResult,
   disabled,
+  onManualInputClick,
   onBarcodeClick,
   onPhotoClick,
   hideManualInput = false,
@@ -235,7 +238,13 @@ export default function VoiceInput({
       >
         {!hideManualInput && (
           <button
-            onClick={() => setShowTextInput(true)}
+            onClick={() => {
+              if (onManualInputClick) {
+                onManualInputClick();
+                return;
+              }
+              setShowTextInput(true);
+            }}
             disabled={disabled}
             className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed touch-manipulation active:scale-95 w-full"
             title="Добавить вручную"

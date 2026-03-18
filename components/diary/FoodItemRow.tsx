@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { caloriesFromBju } from '@/lib/date-utils';
 
 interface FoodItemRowProps {
@@ -33,6 +34,25 @@ interface FoodItemRowProps {
 
 const inputBase =
   'bg-transparent border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-2 text-gray-900 dark:text-white text-base touch-manipulation min-h-[34px]';
+const compactCardInput = `${inputBase} px-2 py-1 text-sm min-h-[30px] rounded-md`;
+const compactCardLabel = 'block text-[10px] leading-tight text-gray-500 dark:text-gray-400 mb-0.5';
+
+type WeightCalcOp = '+' | '-' | '*' | '/';
+
+function applyWeightOp(current: number, op: WeightCalcOp, value: number): number {
+  switch (op) {
+    case '+':
+      return current + value;
+    case '-':
+      return Math.max(0, current - value);
+    case '*':
+      return current * value;
+    case '/':
+      return value !== 0 ? current / value : current;
+    default:
+      return current;
+  }
+}
 
 export default function FoodItemRow({
   id,
@@ -62,6 +82,9 @@ export default function FoodItemRow({
   const [fatPer100g, setFatPer100g] = useState(initialFat.toString());
   const [weightGrams, setWeightGrams] = useState(initialWeight.toString());
   const [isEditing, setIsEditing] = useState(false);
+  const [weightCalcOpen, setWeightCalcOpen] = useState(false);
+  const [weightCalcOp, setWeightCalcOp] = useState<WeightCalcOp>('+');
+  const [weightCalcInput, setWeightCalcInput] = useState('');
   const initialCaloriesPer100 =
     !Number.isNaN(initialCarbs) &&
     !Number.isNaN(initialProtein) &&
@@ -198,10 +221,89 @@ export default function FoodItemRow({
     setCaloriesPer100Input(value);
   };
 
+  const openWeightCalc = () => {
+    setWeightCalcOp('+');
+    setWeightCalcInput('');
+    setWeightCalcOpen(true);
+  };
+
+  const applyWeightCalc = () => {
+    const value = parseFloat(weightCalcInput.replace(',', '.'));
+    if (Number.isNaN(value)) return;
+    const current = parseFloat(weightGrams) || 0;
+    const newWeight = Math.round(applyWeightOp(current, weightCalcOp, value) * 10) / 10;
+    const clamped = Math.max(0, newWeight);
+    setWeightGrams(clamped.toString());
+    onUpdate(id, { weightGrams: clamped });
+    setWeightCalcOpen(false);
+  };
+
+  const weightCalcPopover = weightCalcOpen && (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={() => setWeightCalcOpen(false)}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Калькулятор веса"
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 w-full max-w-[280px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Изменить вес</p>
+        <div className="flex gap-2 mb-3">
+          {(['+', '-', '*', '/'] as const).map((op) => (
+            <button
+              key={op}
+              type="button"
+              onClick={() => setWeightCalcOp(op)}
+              className={`flex-1 min-h-[44px] rounded-lg font-medium transition-colors touch-manipulation ${
+                weightCalcOp === op
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {op}
+            </button>
+          ))}
+        </div>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={weightCalcInput}
+          onChange={(e) => setWeightCalcInput(e.target.value)}
+          placeholder="Число"
+          className={`w-full ${inputBase} mb-3`}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') applyWeightCalc();
+            if (e.key === 'Escape') setWeightCalcOpen(false);
+          }}
+        />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setWeightCalcOpen(false)}
+            className="flex-1 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 touch-manipulation"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={applyWeightCalc}
+            className="flex-1 min-h-[44px] rounded-lg bg-blue-600 text-white hover:bg-blue-700 touch-manipulation"
+          >
+            ОК
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (variant === 'card') {
     return (
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
-        <div className="flex gap-2 items-start justify-between">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2.5 space-y-2">
+        <div className="flex gap-1.5 items-start justify-between">
           <div className="flex gap-2 flex-1 min-w-0 items-start">
             {(fromMenu || savedToMenu) && (
               <span
@@ -215,9 +317,9 @@ export default function FoodItemRow({
               onChange={(e) => setName(e.target.value)}
               onFocus={() => setIsEditing(true)}
               onBlur={saveOnBlur}
-              className={`flex-1 min-w-0 ${inputBase} ${nameInputClass} resize-none leading-snug`}
+              className={`flex-1 min-w-0 ${compactCardInput} ${nameInputClass} resize-none leading-snug`}
               placeholder="Название"
-              rows={2}
+              rows={1}
             />
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -225,9 +327,9 @@ export default function FoodItemRow({
             {deleteBtn}
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+        <div className="grid grid-cols-3 gap-1.5">
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Б, г/100</label>
+            <label className={compactCardLabel}>Б/100</label>
             <input
               type="number"
               inputMode="decimal"
@@ -237,11 +339,11 @@ export default function FoodItemRow({
               onBlur={saveOnBlur}
               min={0}
               step={0.1}
-              className={`w-full ${inputBase}`}
+              className={`w-full ${compactCardInput}`}
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Ж, г/100</label>
+            <label className={compactCardLabel}>Ж/100</label>
             <input
               type="number"
               inputMode="decimal"
@@ -251,11 +353,11 @@ export default function FoodItemRow({
               onBlur={saveOnBlur}
               min={0}
               step={0.1}
-              className={`w-full ${inputBase}`}
+              className={`w-full ${compactCardInput}`}
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">У, г/100</label>
+            <label className={compactCardLabel}>У/100</label>
             <input
               type="number"
               inputMode="decimal"
@@ -265,48 +367,63 @@ export default function FoodItemRow({
               onBlur={saveOnBlur}
               min={0}
               step={0.1}
-              className={`w-full ${inputBase}`}
+              className={`w-full ${compactCardInput}`}
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Вес, г</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={weightGrams}
-              onChange={(e) => setWeightGrams(e.target.value)}
-              onFocus={() => setIsEditing(true)}
-              onBlur={saveOnBlur}
-              min={0}
-              step={1}
-              className={`w-full ${inputBase}`}
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-          <div className="flex items-center gap-1">
-            <span>К/100:</span>
+            <label className={compactCardLabel}>К/100</label>
             <input
               type="number"
               inputMode="decimal"
               value={caloriesPer100Input}
               onChange={(e) => handleCaloriesPer100Change(e.target.value)}
-              className="w-20 bg-transparent border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-sm"
+              className={`w-full ${compactCardInput}`}
               min={0}
               step={1}
             />
           </div>
-          <span className="text-gray-700 dark:text-gray-300">
-            · Б:{displayTotalProtein.toFixed(0)} Ж:{displayTotalFat.toFixed(0)} У:{displayTotalCarbs.toFixed(0)}
-          </span>
-          <span>· ккал: {Math.round(displayCalories)}</span>
+          <div className="col-span-2 max-w-[170px]">
+            <label className={compactCardLabel}>Вес, г</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={weightGrams}
+                onChange={(e) => setWeightGrams(e.target.value)}
+                onFocus={() => setIsEditing(true)}
+                onBlur={saveOnBlur}
+                min={0}
+                step={1}
+                className={`flex-1 ${compactCardInput}`}
+              />
+              <button
+                type="button"
+                onClick={openWeightCalc}
+                className="min-h-[30px] min-w-[30px] h-[30px] w-[30px] flex items-center justify-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md border border-gray-200 dark:border-gray-600 transition-colors touch-manipulation active:scale-95 shrink-0"
+                aria-label="Калькулятор веса"
+                title="Изменить вес (+ − × ÷)"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-900 dark:text-white">
+          <span className="text-gray-700 dark:text-gray-300 truncate">
+            Б:{displayTotalProtein.toFixed(0)} Ж:{displayTotalFat.toFixed(0)} У:{displayTotalCarbs.toFixed(0)}
+          </span>
+          <span className="shrink-0">· ккал: {Math.round(displayCalories)}</span>
+        </div>
+        {weightCalcPopover}
       </div>
     );
   }
 
   return (
-    <tr className="border-t border-gray-200 dark:border-gray-700">
+    <>
+      <tr className="border-t border-gray-200 dark:border-gray-700">
       <td className="py-3 px-2 sm:px-4 align-top">
         <div className="flex gap-2 items-center min-w-0">
           {(fromMenu || savedToMenu) && (
@@ -369,19 +486,32 @@ export default function FoodItemRow({
           className="w-16 sm:w-20 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-gray-900 dark:text-white min-h-[44px]"
         />
       </td>
-      <td className="py-3 px-2 sm:px-4">
-        <input
-          type="number"
-          inputMode="numeric"
-          value={weightGrams}
-          onChange={(e) => setWeightGrams(e.target.value)}
-          onFocus={() => setIsEditing(true)}
-          onBlur={saveOnBlur}
-          min={0}
-          step={1}
-          className="w-16 sm:w-20 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-gray-900 dark:text-white min-h-[44px]"
-        />
-      </td>
+        <td className="py-3 px-2 sm:px-4">
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={weightGrams}
+              onChange={(e) => setWeightGrams(e.target.value)}
+              onFocus={() => setIsEditing(true)}
+              onBlur={saveOnBlur}
+              min={0}
+              step={1}
+              className="w-16 sm:w-20 bg-transparent border border-transparent hover:border-gray-200 dark:hover:border-gray-600 focus:ring-2 focus:ring-blue-500 rounded px-2 py-1.5 text-gray-900 dark:text-white min-h-[44px]"
+            />
+            <button
+              type="button"
+              onClick={openWeightCalc}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors touch-manipulation active:scale-95 shrink-0"
+              aria-label="Калькулятор веса"
+              title="Изменить вес (+ − × ÷)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+        </td>
       <td className="py-3 px-2 sm:px-4 text-gray-900 dark:text-white text-sm">
         <input
           type="number"
@@ -402,6 +532,10 @@ export default function FoodItemRow({
           {deleteBtn}
         </div>
       </td>
-    </tr>
+      </tr>
+      {weightCalcOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(weightCalcPopover, document.body)}
+    </>
   );
 }

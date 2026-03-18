@@ -265,6 +265,8 @@ interface MealBlockProps {
   onSaveToMenu?: (mealId: string, foodId: string, name: string, carbs: number, protein: number, fat: number, caloriesPer100g?: number) => void;
   /** При открытии страницы: развёрнут только если с момента приёма прошло не более 30 минут */
   defaultExpanded?: boolean;
+  /** Открыть отдельную страницу ручного поиска/добавления продукта */
+  onOpenManualSearch?: (mealId: string) => void;
 }
 
 export default function MealBlock({
@@ -287,6 +289,7 @@ export default function MealBlock({
   foodIdsFromMenu,
   onSaveToMenu,
   defaultExpanded = false,
+  onOpenManualSearch,
 }: MealBlockProps) {
   const [time, setTime] = useState(initialTime);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -685,6 +688,11 @@ export default function MealBlock({
               <VoiceInput
                 onResult={handleAddFoodFromVoice}
                 disabled={isAddingFood}
+                onManualInputClick={
+                  onOpenManualSearch
+                    ? () => onOpenManualSearch(id)
+                    : undefined
+                }
                 onBarcodeClick={onAddFoodByBarcode ? handleBarcodeClick : undefined}
                 onPhotoClick={onAddFoodByPhoto ? handlePhotoClick : undefined}
               />
