@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { prepareSearchQuery, scoreMenuItemWithRecipe } from '@/lib/menu-search';
 import { prisma } from '@/lib/prisma';
+import { isSharedMenuEnabled, sharedMenuRequest } from '@/lib/shared-menu-service';
 import { normalizeRecipeSearchQuery } from '@/lib/recipe-name';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -24,6 +25,11 @@ const createMenuSchema = z.object({
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 
+function getSessionEmail(session: Awaited<ReturnType<typeof auth>>): string | null {
+  const email = session?.user?.email?.trim().toLowerCase();
+  return email || null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -36,6 +42,27 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get('limit') ?? String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT));
     const search = (searchParams.get('search') ?? '').trim();
     const recipesOnly = searchParams.get('recipesOnly') === 'true';
+
+    if (isSharedMenuEnabled()) {
+      const email = getSessionEmail(session);
+      if (!email) {
+        return NextResponse.json({ error: 'Missing user email' }, { status: 400 });
+      }
+      const sharedResult = await sharedMenuRequest<{
+        items: unknown[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>({
+        email,
+        path: '/api/menu',
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+          recipesOnly: recipesOnly || undefined,
+        },
+      });
+      return NextResponse.json(sharedResult);
+    }
 
     const baseWhere: { userId: string; recipeText?: { not: null } } = {
       userId: session.user.id,
@@ -111,6 +138,20 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const validated = createMenuSchema.parse(body);
+
+    if (isSharedMenuEnabled()) {
+      const email = getSessionEmail(session);
+      if (!email) {
+        return NextResponse.json({ error: 'Missing user email' }, { status: 400 });
+      }
+      const sharedResult = await sharedMenuRequest<{ item: unknown }>({
+        method: 'POST',
+        email,
+        path: '/api/menu',
+        body: validated,
+      });
+      return NextResponse.json(sharedResult);
+    }
 
     const protein = validated.proteinPer100g ?? 0;
     const fat = validated.fatPer100g ?? 0;

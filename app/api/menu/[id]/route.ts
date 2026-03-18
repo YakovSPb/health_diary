@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isSharedMenuEnabled, sharedMenuRequest } from '@/lib/shared-menu-service';
 import { z } from 'zod';
 
 function caloriesFromBju(protein: number, carbs: number, fat: number): number {
@@ -18,6 +19,11 @@ const updateMenuSchema = z.object({
   recipeText: z.string().max(10000).optional(),
 });
 
+function getSessionEmail(session: Awaited<ReturnType<typeof auth>>): string | null {
+  const email = session?.user?.email?.trim().toLowerCase();
+  return email || null;
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -31,6 +37,20 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
     const validated = updateMenuSchema.parse(body);
+
+    if (isSharedMenuEnabled()) {
+      const email = getSessionEmail(session);
+      if (!email) {
+        return NextResponse.json({ error: 'Missing user email' }, { status: 400 });
+      }
+      const sharedResult = await sharedMenuRequest<{ item: unknown }>({
+        method: 'PATCH',
+        email,
+        path: `/api/menu/${id}`,
+        body: validated,
+      });
+      return NextResponse.json(sharedResult);
+    }
 
     const existing = await prisma.menuItem.findFirst({
       where: { id, userId: session.user.id },
@@ -84,6 +104,19 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    if (isSharedMenuEnabled()) {
+      const email = getSessionEmail(session);
+      if (!email) {
+        return NextResponse.json({ error: 'Missing user email' }, { status: 400 });
+      }
+      const sharedResult = await sharedMenuRequest<{ success: boolean }>({
+        method: 'DELETE',
+        email,
+        path: `/api/menu/${id}`,
+      });
+      return NextResponse.json(sharedResult);
+    }
+
     const existing = await prisma.menuItem.findFirst({
       where: { id, userId: session.user.id },
     });
