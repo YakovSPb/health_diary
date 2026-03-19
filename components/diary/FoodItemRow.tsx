@@ -73,9 +73,7 @@ export default function FoodItemRow({
   onSaveToMenu,
   hasSugar = false,
 }: FoodItemRowProps) {
-  const nameInputClass = hasSugar
-    ? 'text-red-600 dark:text-red-400'
-    : 'text-gray-900 dark:text-white';
+  const nameInputClass = 'text-gray-900 dark:text-white';
   const [name, setName] = useState(initialName);
   const [carbsPer100g, setCarbsPer100g] = useState(initialCarbs.toString());
   const [proteinPer100g, setProteinPer100g] = useState(initialProtein.toString());

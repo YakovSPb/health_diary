@@ -173,7 +173,9 @@ export default function DiaryPage() {
   };
 
   const handleDeleteMeal = async (mealId: string) => {
-    if (!confirm('Удалить приём пищи?')) return;
+    const meal = meals.find((m) => m.id === mealId);
+    const isEmpty = !meal || meal.foodItems.length === 0;
+    if (!isEmpty && !confirm('Удалить приём пищи?')) return;
     try {
       const response = await fetch(`/api/meals/${mealId}`, { method: 'DELETE' });
       if (response.ok) {

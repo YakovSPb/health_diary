@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Missing user email' }, { status: 400 });
       }
       const sharedResult = await sharedMenuRequest<{
-        items: unknown[];
+        items: { name: string; recipeText?: string | null; [key: string]: unknown }[];
         pagination: { page: number; limit: number; total: number; totalPages: number };
       }>({
         email,
@@ -62,6 +62,24 @@ export async function GET(request: NextRequest) {
           recipesOnly: recipesOnly || undefined,
         },
       });
+
+      // Пост-фильтрация результатов внешнего сервиса локальным скорером.
+      // Внешний сервис может использовать устаревшую логику поиска —
+      // отсеиваем нерелевантные совпадения (напр. «сыр» → «сырые»).
+      if (search && sharedResult.items?.length) {
+        const cleanedSearch = search.replace(/\d+\s*(г|грамм[а-я]*|гр\.?|мл|кг|л)/gi, '').trim();
+        const preparedQuery = prepareSearchQuery(cleanedSearch);
+        sharedResult.items = sharedResult.items.filter((item) => {
+          const score = scoreMenuItemWithRecipe(
+            preparedQuery,
+            item.name ?? '',
+            item.recipeText ?? null
+          );
+          return score > 0;
+        });
+        sharedResult.pagination.total = sharedResult.items.length;
+      }
+
       return NextResponse.json(sharedResult);
     }
 

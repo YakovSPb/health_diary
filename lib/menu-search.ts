@@ -40,6 +40,15 @@ const RECIPE_STEM_EQUIVALENTS: string[][] = [
 /** Минимальная длина стема для учёта совпадения по префиксу (избегаем ложных совпадений). */
 const MIN_STEM_PREFIX_LEN = 3;
 
+/**
+ * Окончания, характерные исключительно для прилагательных.
+ * Используются для отсева ложных prefix-совпадений стемов:
+ * «сырые».startsWith(«сыр») истинно, но «сырые» — прилагательное, а не форма слова «сыр».
+ */
+const ADJECTIVE_SUFFIXES = new Set([
+  'ые', 'ие', 'ой', 'ая', 'ое', 'ого', 'ому', 'ую', 'ых', 'ым', 'ими',
+]);
+
 function stemMatchesForRecipe(queryStem: string, itemStemSet: Set<string>): boolean {
   if (itemStemSet.has(queryStem)) return true;
   for (const group of RECIPE_STEM_EQUIVALENTS) {
@@ -48,11 +57,13 @@ function stemMatchesForRecipe(queryStem: string, itemStemSet: Set<string>): bool
   }
   if (queryStem.length >= MIN_STEM_PREFIX_LEN) {
     for (const itemStem of itemStemSet) {
-      if (
-        itemStem.length >= MIN_STEM_PREFIX_LEN &&
-        (itemStem.startsWith(queryStem) || queryStem.startsWith(itemStem))
-      ) {
-        return true;
+      if (itemStem.length >= MIN_STEM_PREFIX_LEN) {
+        if (itemStem.startsWith(queryStem)) {
+          const suffix = itemStem.slice(queryStem.length);
+          if (!ADJECTIVE_SUFFIXES.has(suffix)) return true;
+        } else if (queryStem.startsWith(itemStem)) {
+          return true;
+        }
       }
     }
   }
@@ -210,6 +221,11 @@ export function simpleRussianStem(word: string): string {
     'ю',
   ];
 
+  // «Сырые» (прилагательное, «raw») не должно стемироваться до «сыр» (существительное, «cheese»).
+  // Если заблокировать «ые», цикл доходит до «е» и даёт «сыры», которое по префиксу всё равно
+  // совпадает с «сыр». Ранний возврат предотвращает любое срезание суффиксов у коротких «…ые».
+  if (w.endsWith('ые') && w.length <= 5) return w;
+
   for (const suf of suffixes) {
     if (w.length > suf.length + 2 && w.endsWith(suf)) {
       return w.slice(0, -suf.length);
@@ -307,7 +323,11 @@ export function scoreMenuItem(query: PreparedQuery, itemName: string, options?: 
     score += 1000;
   }
 
-  if (itemPrepared.normalized.includes(query.normalized) || query.normalized.includes(itemPrepared.normalized)) {
+  // +500 только если все токены запроса присутствуют как целые слова в названии блюда.
+  // Substring-проверка («сыр» внутри «сырые») намеренно исключена.
+  const allQueryTokensInItem = query.tokens.every((qt) => itemPrepared.tokens.includes(qt));
+  const itemTokensSubsetOfQuery = itemPrepared.tokens.every((it) => query.tokens.includes(it));
+  if (allQueryTokensInItem || itemTokensSubsetOfQuery) {
     score += 500;
   }
 
@@ -321,15 +341,10 @@ export function scoreMenuItem(query: PreparedQuery, itemName: string, options?: 
       }
     }
   } else if (query.stems.length === 1) {
-    const stem = query.stems[0];
-    if (!stemMatch(stem)) {
-      const hasPartialStem =
-        itemPrepared.stems.some((s) => s.startsWith(stem) || stem.startsWith(s)) ||
-        itemPrepared.normalized.includes(query.normalized) ||
-        query.normalized.includes(itemPrepared.normalized);
-      if (!hasPartialStem) {
-        return 0;
-      }
+    // Для однословного запроса требуем точное совпадение стема — без prefix-матча и substring.
+    // Это исключает ложные совпадения типа «сыр» → «сырые».
+    if (!stemMatch(query.stems[0])) {
+      return 0;
     }
   }
 
